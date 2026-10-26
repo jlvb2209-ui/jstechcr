@@ -49,8 +49,8 @@
                         <input id="p_nombre" maxlength="120" required placeholder="Ej: Tinta Epson T664 Negra">
                     </div>
                     <div class="field">
-                        <label for="p_precio">Precio (₡) <small style="font-weight:normal; color:var(--muted);">(Opcional)</small></label>
-                        <input id="p_precio" type="number" min="0" step="0.01" placeholder="Ej: 8500 (Dejar en blanco si no aplica)">
+                        <label for="p_precio">Precio (₡) <small style="font-weight:normal; color:var(--muted);">(Opcional / Letras o Números)</small></label>
+                        <input id="p_precio" type="text" maxlength="60" placeholder="Ej: 8500, Desde ₡5000, A consultar...">
                     </div>
                     <div class="field">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px;">
@@ -124,7 +124,7 @@
 </div>
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { initializeFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { initializeFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     
     const firebaseConfig = {
         apiKey: "AIzaSyBHdtd1YLq8z_cuVgUDx33Z088okq0Sriw",
@@ -276,7 +276,7 @@
         }
     });
 
-    // Función para preparar la edición de un producto
+    // Función para cargar los datos del producto a editar
     window.prepararEdicion = (id) => {
         const p = productosCache[id];
         if (!p) return;
@@ -284,7 +284,7 @@
         imagenActualUrl = p.imagen;
 
         document.getElementById("p_nombre").value = p.nombre || "";
-        document.getElementById("p_precio").value = (p.precio !== null && p.precio !== undefined) ? p.precio : "";
+        document.getElementById("p_precio").value = p.precio !== undefined && p.precio !== null ? p.precio : "";
         selectCategoria.value = p.categoria || "";
         lblCatSeleccionada.textContent = p.categoria || "-";
         actualizarSelectSubcategorias();
@@ -295,7 +295,7 @@
             vistaPrevia.innerHTML = `
                 <div style="display:flex; align-items:center; gap:10px;">
                     <img src="${escapar(p.imagen)}" style="width:120px; height:120px; object-fit:cover; border-radius:8px; border:1px solid #cbd5e1;">
-                    <small class="muted">Imagen actual (puedes seleccionar otra si deseas cambiarla)</small>
+                    <small class="muted">Imagen actual (puedes seleccionar otra para reemplazarla)</small>
                 </div>
             `;
         } else {
@@ -311,7 +311,6 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    // Botón cancelar edición
     btnCancelarEdicion.addEventListener("click", () => {
         resetearFormularioEdicion();
     });
@@ -331,8 +330,7 @@
     form.addEventListener("submit", async e => {
         e.preventDefault();
         const nombre = document.getElementById("p_nombre").value.trim();
-        const precioVal = document.getElementById("p_precio").value.trim();
-        const precio = precioVal !== "" ? Number(precioVal) : null;
+        const precio = document.getElementById("p_precio").value.trim();
         const categoria = selectCategoria.value;
         const subcategoria = selectSubcategoria.value || "";
         const descripcion = document.getElementById("p_desc").value.trim();
@@ -422,7 +420,10 @@
                     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;">
             `;
             productos.forEach(p => {
-                const textoPrecio = (p.precio !== null && p.precio !== undefined && p.precio !== "") ? `₡${escapar(p.precio)}` : "Precio a consultar";
+                const precioMostrar = (p.precio !== undefined && p.precio !== null && p.precio !== "") 
+                    ? (isNaN(p.precio) ? p.precio : `₡${p.precio}`) 
+                    : "Precio a consultar";
+
                 html += `
                     <div class="device-row" style="margin:0; height: 100%;">
                         <img src="${escapar(p.imagen)}" alt="Foto" style="width:100%; height:130px; object-fit:cover; border-radius:8px; margin-bottom:10px;" onerror="this.src='logo.jpeg'">
@@ -430,7 +431,7 @@
                         <div style="display:flex;gap:4px;flex-wrap:wrap;margin:4px 0;">
                             ${p.subcategoria ? `<span style="font-size:10px; font-weight:700; background:#dcfce7; color:#166534; padding:2px 8px; border-radius:4px;">${escapar(p.subcategoria)}</span>` : '<span style="font-size:10px; font-weight:700; background:#f1f5f9; color:#64748b; padding:2px 8px; border-radius:4px;">General</span>'}
                         </div>
-                        <p style="color: var(--brand-700); font-weight:700; margin:4px 0;">${escapar(textoPrecio)}</p>
+                        <p style="color: var(--brand-700); font-weight:700; margin:4px 0;">${escapar(precioMostrar)}</p>
                         <small class="muted" style="flex: 1;">${escapar(p.descripcion)}</small>
                         <div style="display: flex; gap: 8px; margin-top: 10px;">
                             <button class="btn-edit" style="flex:1; justify-content:center;" onclick="prepararEdicion('${p.id}')">✏️ Editar</button>
