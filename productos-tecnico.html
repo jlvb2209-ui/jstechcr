@@ -35,12 +35,12 @@
         <section class="card">
             <div class="section-heading">
                 <div>
-                    <span class="section-kicker">NUEVO PRODUCTO</span>
-                    <h2>Publicar artículo</h2>
+                    <span class="section-kicker" id="kickerFormulario">NUEVO PRODUCTO</span>
+                    <h2 id="tituloFormProducto">Publicar artículo</h2>
                 </div>
                 <span class="heading-icon">＋</span>
             </div>
-            <p class="muted">Ingresa los detalles, selecciona categoría y subcategoría, y sube la foto a Google Drive.</p>
+            <p class="muted" id="subtituloFormProducto">Ingresa los detalles, selecciona categoría y subcategoría, y sube la foto a Google Drive.</p>
             
             <form id="productForm">
                 <div class="form-grid">
@@ -49,8 +49,8 @@
                         <input id="p_nombre" maxlength="120" required placeholder="Ej: Tinta Epson T664 Negra">
                     </div>
                     <div class="field">
-                        <label for="p_precio">Precio (₡) *</label>
-                        <input id="p_precio" type="number" min="0" step="0.01" required placeholder="8500">
+                        <label for="p_precio">Precio (₡) <small style="font-weight:normal; color:var(--muted);">(Opcional)</small></label>
+                        <input id="p_precio" type="number" min="0" step="0.01" placeholder="Ej: 8500 (Dejar en blanco si no aplica)">
                     </div>
                     <div class="field">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px;">
@@ -89,17 +89,23 @@
                 </div>
                 
                 <div class="field" style="margin-top:14px;">
-                    <label for="p_foto">Fotografía del Producto (Google Drive) *</label>
-                    <input type="file" id="p_foto" accept="image/jpeg,image/png,image/webp" required class="photo-input">
+                    <label for="p_foto">Fotografía del Producto (Google Drive)</label>
+                    <input type="file" id="p_foto" accept="image/jpeg,image/png,image/webp" class="photo-input">
                     <div id="vistaPreviaProducto" style="margin-top:10px;"></div>
                 </div>
                 <div class="field" style="margin-top:14px;">
                     <label for="p_desc">Descripción del producto *</label>
                     <textarea id="p_desc" rows="3" required placeholder="Detalles, estado, compatibilidad..."></textarea>
                 </div>
-                <button class="btn btn-primary btn-full" id="btnSubirProducto" type="submit" style="margin-top: 18px;">
-                    Subir foto a Google Drive y Publicar
-                </button>
+                
+                <div style="display: flex; gap: 10px; margin-top: 18px;">
+                    <button class="btn btn-primary btn-full" id="btnSubirProducto" type="submit" style="flex: 1; margin: 0;">
+                        Subir foto a Google Drive y Publicar
+                    </button>
+                    <button class="btn btn-neutral" id="btnCancelarEdicion" type="button" style="display: none; padding: 0 20px;">
+                        Cancelar
+                    </button>
+                </div>
                 <div id="mensajeProducto" class="photo-status" aria-live="polite"></div>
             </form>
         </section>
@@ -110,17 +116,15 @@
                 Cargando productos...
             </div>
         </section>
-
         <footer class="footer">
             <span>JS TECH</span>
             <span>Panel de gestión y ventas</span>
         </footer>
     </main>
 </div>
-
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { initializeFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { initializeFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     
     const firebaseConfig = {
         apiKey: "AIzaSyBHdtd1YLq8z_cuVgUDx33Z088okq0Sriw",
@@ -130,7 +134,7 @@
         messagingSenderId: "475926146823",
         appId: "1:475926146823:web:1bd26d301c1ad0d25f5fa2"
     };
-    const URL_GOOGLE_DRIVE = "https://script.google.com/macros/s/AKfycbzlow_wvsZqfhcx6zKHzNRg6xGmScLD9_C5cGuIjXl_fJnpooVFN5jv7VwcKmOW9CGygg/exec";
+    const URL_GOOGLE_DRIVE = "https://script.google.com/macros/s/AKfycbw37r2nI4NiFB2tlE9K31RTFY7fSh30mBMOVlnpGAn0qEow65hztlfxSzVSudGgf2cH1Q/exec";
     
     const app = initializeApp(firebaseConfig);
     const db = initializeFirestore(app, { experimentalForceLongPolling: true });
@@ -154,7 +158,17 @@
     const btnGuardarSubCat = document.getElementById("btnGuardarSubCat");
     const listaSubCategoriasAdmin = document.getElementById("listaSubCategoriasAdmin");
     const lblCatSeleccionada = document.getElementById("lblCatSeleccionada");
+
+    const tituloFormProducto = document.getElementById("tituloFormProducto");
+    const subtituloFormProducto = document.getElementById("subtituloFormProducto");
+    const kickerFormulario = document.getElementById("kickerFormulario");
+    const btnSubirProducto = document.getElementById("btnSubirProducto");
+    const btnCancelarEdicion = document.getElementById("btnCancelarEdicion");
+
     let subcategoriasCache = [];
+    let productosCache = {};
+    let editandoId = null;
+    let imagenActualUrl = "";
 
     function escapar(valor) {
         return String(valor ?? "").replace(/[&<>"']/g, caracter => ({
@@ -262,66 +276,142 @@
         }
     });
 
+    // Función para preparar la edición de un producto
+    window.prepararEdicion = (id) => {
+        const p = productosCache[id];
+        if (!p) return;
+        editandoId = id;
+        imagenActualUrl = p.imagen;
+
+        document.getElementById("p_nombre").value = p.nombre || "";
+        document.getElementById("p_precio").value = (p.precio !== null && p.precio !== undefined) ? p.precio : "";
+        selectCategoria.value = p.categoria || "";
+        lblCatSeleccionada.textContent = p.categoria || "-";
+        actualizarSelectSubcategorias();
+        selectSubcategoria.value = p.subcategoria || "";
+        document.getElementById("p_desc").value = p.descripcion || "";
+
+        if (p.imagen) {
+            vistaPrevia.innerHTML = `
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <img src="${escapar(p.imagen)}" style="width:120px; height:120px; object-fit:cover; border-radius:8px; border:1px solid #cbd5e1;">
+                    <small class="muted">Imagen actual (puedes seleccionar otra si deseas cambiarla)</small>
+                </div>
+            `;
+        } else {
+            vistaPrevia.innerHTML = "";
+        }
+
+        kickerFormulario.textContent = "MODIFICAR PRODUCTO";
+        tituloFormProducto.textContent = "Editar artículo";
+        subtituloFormProducto.textContent = `Actualizando los detalles del producto ID: ${id}`;
+        btnSubirProducto.textContent = "Guardar cambios";
+        btnCancelarEdicion.style.display = "inline-flex";
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    // Botón cancelar edición
+    btnCancelarEdicion.addEventListener("click", () => {
+        resetearFormularioEdicion();
+    });
+
+    function resetearFormularioEdicion() {
+        editandoId = null;
+        imagenActualUrl = "";
+        form.reset();
+        vistaPrevia.innerHTML = "";
+        kickerFormulario.textContent = "NUEVO PRODUCTO";
+        tituloFormProducto.textContent = "Publicar artículo";
+        subtituloFormProducto.textContent = "Ingresa los detalles, selecciona categoría y subcategoría, y sube la foto a Google Drive.";
+        btnSubirProducto.textContent = "Subir foto a Google Drive y Publicar";
+        btnCancelarEdicion.style.display = "none";
+    }
+
     form.addEventListener("submit", async e => {
         e.preventDefault();
         const nombre = document.getElementById("p_nombre").value.trim();
-        const precio = document.getElementById("p_precio").value.trim();
+        const precioVal = document.getElementById("p_precio").value.trim();
+        const precio = precioVal !== "" ? Number(precioVal) : null;
         const categoria = selectCategoria.value;
         const subcategoria = selectSubcategoria.value || "";
         const descripcion = document.getElementById("p_desc").value.trim();
         const archivo = fotoInput.files[0];
-        if (!archivo) return alert("Selecciona una fotografía.");
-        const boton = document.getElementById("btnSubirProducto");
-        boton.disabled = true;
-        boton.textContent = "Subiendo a Google Drive...";
+
+        if (!editandoId && !archivo) return alert("Selecciona una fotografía para el nuevo producto.");
+
+        btnSubirProducto.disabled = true;
+        btnSubirProducto.textContent = editandoId ? "Actualizando producto..." : "Subiendo a Google Drive...";
+
         try {
-            const base64 = await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = error => reject(error);
-                reader.readAsDataURL(archivo);
-            });
-            const respuesta = await fetch(URL_GOOGLE_DRIVE, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({ file: base64, filename: `PROD_${Date.now()}_${archivo.name}` })
-            });
-            const resultado = await respuesta.json();
-            if (resultado.status !== "success" || !resultado.url) throw new Error("Error al subir imagen.");
-            await addDoc(collection(db, "products"), {
-                nombre,
-                precio: Number(precio),
-                categoria,
-                subcategoria,
-                imagen: resultado.url,
-                descripcion,
-                creado: Date.now()
-            });
-            mensaje.innerHTML = `<div class="message success">¡Foto subida a Google Drive y producto publicado!</div>`;
-            form.reset();
-            vistaPrevia.innerHTML = "";
+            let urlImagenFinal = imagenActualUrl;
+
+            if (archivo) {
+                const base64 = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = error => reject(error);
+                    reader.readAsDataURL(archivo);
+                });
+                const respuesta = await fetch(URL_GOOGLE_DRIVE, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ file: base64, filename: `PROD_${Date.now()}_${archivo.name}` })
+                });
+                const resultado = await respuesta.json();
+                if (resultado.status !== "success" || !resultado.url) throw new Error("Error al subir imagen.");
+                urlImagenFinal = resultado.url;
+            }
+
+            if (editandoId) {
+                await updateDoc(doc(db, "products", editandoId), {
+                    nombre,
+                    precio,
+                    categoria,
+                    subcategoria,
+                    imagen: urlImagenFinal,
+                    descripcion,
+                    actualizado: Date.now()
+                });
+                mensaje.innerHTML = `<div class="message success">¡Producto actualizado correctamente!</div>`;
+                resetearFormularioEdicion();
+            } else {
+                await addDoc(collection(db, "products"), {
+                    nombre,
+                    precio,
+                    categoria,
+                    subcategoria,
+                    imagen: urlImagenFinal,
+                    descripcion,
+                    creado: Date.now()
+                });
+                mensaje.innerHTML = `<div class="message success">¡Foto subida a Google Drive y producto publicado!</div>`;
+                form.reset();
+                vistaPrevia.innerHTML = "";
+            }
         } catch (error) {
             mensaje.innerHTML = `<div class="message error">${escapar(error.message)}</div>`;
         } finally {
-            boton.disabled = false;
-            boton.textContent = "Subir foto a Google Drive y Publicar";
+            btnSubirProducto.disabled = false;
+            btnSubirProducto.textContent = editandoId ? "Guardar cambios" : "Subir foto a Google Drive y Publicar";
         }
     });
 
     onSnapshot(query(collection(db, "products"), orderBy("creado", "desc")), snapshot => {
+        productosCache = {};
         if (snapshot.empty) {
             contenedorLista.innerHTML = `<p class="muted">No hay productos publicados todavía.</p>`;
             return;
         }
-
         let porCategoria = {};
         snapshot.forEach(docSnap => {
             const p = docSnap.data();
+            const id = docSnap.id;
+            productosCache[id] = { id, ...p };
             const cat = p.categoria || "Sin categoría";
             if (!porCategoria[cat]) porCategoria[cat] = [];
-            porCategoria[cat].push({ id: docSnap.id, ...p });
+            porCategoria[cat].push({ id, ...p });
         });
-
         let html = "";
         for (const [cat, productos] of Object.entries(porCategoria)) {
             html += `
@@ -331,8 +421,8 @@
                     </h3>
                     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;">
             `;
-
             productos.forEach(p => {
+                const textoPrecio = (p.precio !== null && p.precio !== undefined && p.precio !== "") ? `₡${escapar(p.precio)}` : "Precio a consultar";
                 html += `
                     <div class="device-row" style="margin:0; height: 100%;">
                         <img src="${escapar(p.imagen)}" alt="Foto" style="width:100%; height:130px; object-fit:cover; border-radius:8px; margin-bottom:10px;" onerror="this.src='logo.jpeg'">
@@ -340,22 +430,26 @@
                         <div style="display:flex;gap:4px;flex-wrap:wrap;margin:4px 0;">
                             ${p.subcategoria ? `<span style="font-size:10px; font-weight:700; background:#dcfce7; color:#166534; padding:2px 8px; border-radius:4px;">${escapar(p.subcategoria)}</span>` : '<span style="font-size:10px; font-weight:700; background:#f1f5f9; color:#64748b; padding:2px 8px; border-radius:4px;">General</span>'}
                         </div>
-                        <p style="color: var(--brand-700); font-weight:700; margin:4px 0;">₡${escapar(p.precio)}</p>
+                        <p style="color: var(--brand-700); font-weight:700; margin:4px 0;">${escapar(textoPrecio)}</p>
                         <small class="muted" style="flex: 1;">${escapar(p.descripcion)}</small>
-                        <button class="btn-delete" style="width:100%; margin-top:10px; justify-content:center;" onclick="eliminarProducto('${p.id}')">🗑 Eliminar</button>
+                        <div style="display: flex; gap: 8px; margin-top: 10px;">
+                            <button class="btn-edit" style="flex:1; justify-content:center;" onclick="prepararEdicion('${p.id}')">✏️ Editar</button>
+                            <button class="btn-delete" style="flex:1; justify-content:center;" onclick="eliminarProducto('${p.id}')">🗑 Eliminar</button>
+                        </div>
                     </div>
                 `;
             });
-
             html += `</div></div>`;
         }
-
         contenedorLista.innerHTML = html;
     });
 
     window.eliminarProducto = async id => {
         if (confirm("¿Estás seguro de eliminar este producto?")) {
             await deleteDoc(doc(db, "products", id));
+            if (editandoId === id) {
+                resetearFormularioEdicion();
+            }
         }
     };
 </script>
