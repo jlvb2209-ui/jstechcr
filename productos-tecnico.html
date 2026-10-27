@@ -111,12 +111,14 @@
         </section>
         
         <section class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
-                <h3 style="margin: 0;">Productos Publicados Actualmente</h3>
-                <div style="flex: 1; min-width: 240px; max-width: 360px;">
-                    <input type="search" id="busquedaProductosTecnico" placeholder="🔍 Buscar por nombre o descripción..." style="padding: 8px 12px; font-size: 13px; border-radius: 8px;">
+            <!-- ZONA VERDE: TÍTULO Y BUSCADOR UNIFICADOS -->
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 20px; border-bottom: 1px solid var(--line); padding-bottom: 14px;">
+                <h3 style="margin: 0; font-size: 1.25rem;">Productos Publicados Activos</h3>
+                <div style="flex: 1; min-width: 260px; max-width: 400px;">
+                    <input type="search" id="busquedaProductosTecnico" placeholder="🔍 Buscar por nombre o descripción..." style="padding: 10px 14px; font-size: 13px; border-radius: 8px;">
                 </div>
             </div>
+
             <div id="listaProductosTecnico" style="margin-top: 10px;" aria-live="polite">
                 Cargando productos...
             </div>
@@ -176,7 +178,7 @@
     let productosInstantaneos = [];
     let editandoId = null;
     let imagenActualUrl = "";
-    let categoriasColapsadas = {}; // Almacena qué categorías están ocultas
+    let categoriasColapsadas = {}; // Controla si la categoría está abierta o cerrada
 
     function escapar(valor) {
         return String(valor ?? "").replace(/[&<>"']/g, caracter => ({
@@ -461,14 +463,15 @@
             const estiloDisplay = estaColapsada ? "display: none;" : "display: grid;";
 
             html += `
-                <div style="margin-bottom: 24px; border: 1px solid var(--line); border-radius: 10px; padding: 14px; background: #fff;">
+                <div style="margin-bottom: 24px; border: 1px solid var(--line); border-radius: 12px; padding: 16px; background: #fff; box-shadow: var(--shadow-sm);">
+                    <!-- ZONA AZUL: FLECHA Y TÍTULO DE CATEGORÍA -->
                     <div onclick="toggleCategoriaColapsar('${escapar(cat)}')" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;">
-                        <h3 style="font-size: 1.1rem; color: var(--brand-700); margin: 0;">
+                        <h3 style="font-size: 1.15rem; color: var(--brand-700); margin: 0; display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 1rem; color: var(--brand-600);">${flecha}</span>
                             📦 ${escapar(cat)} (${productos.length} productos)
                         </h3>
-                        <span style="font-size: 1.1rem; font-weight: bold; color: var(--brand-700); padding: 4px 10px;">${flecha}</span>
                     </div>
-                    <div id="cat-content-${escapar(cat)}" style="${estiloDisplay} grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; margin-top: 14px;">
+                    <div style="${estiloDisplay} grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; margin-top: 14px;">
             `;
 
             productos.forEach(p => {
