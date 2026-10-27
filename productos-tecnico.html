@@ -111,7 +111,6 @@
         </section>
         
         <section class="card">
-            <!-- ZONA VERDE: TÍTULO Y BUSCADOR UNIFICADOS -->
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 20px; border-bottom: 1px solid var(--line); padding-bottom: 14px;">
                 <h3 style="margin: 0; font-size: 1.25rem;">Productos Publicados Activos</h3>
                 <div style="flex: 1; min-width: 260px; max-width: 400px;">
@@ -178,7 +177,7 @@
     let productosInstantaneos = [];
     let editandoId = null;
     let imagenActualUrl = "";
-    let categoriasColapsadas = {}; // Controla si la categoría está abierta o cerrada
+    let categoriasColapsadas = {};
 
     function escapar(valor) {
         return String(valor ?? "").replace(/[&<>"']/g, caracter => ({
@@ -390,6 +389,7 @@
                     subcategoria,
                     imagen: urlImagenFinal,
                     descripcion,
+                    oculto: false,
                     creado: Date.now()
                 });
                 mensaje.innerHTML = `<div class="message success">¡Foto subida a Google Drive y producto publicado!</div>`;
@@ -423,6 +423,16 @@
     window.toggleCategoriaColapsar = (catNombre) => {
         categoriasColapsadas[catNombre] = !categoriasColapsadas[catNombre];
         renderizarProductosTecnico();
+    };
+
+    window.toggleOcultarProducto = async (id, estadoActual) => {
+        try {
+            await updateDoc(doc(db, "products", id), {
+                oculto: !estadoActual
+            });
+        } catch (error) {
+            alert("No se pudo cambiar el estado de visibilidad: " + error.message);
+        }
     };
 
     function renderizarProductosTecnico() {
@@ -464,7 +474,6 @@
 
             html += `
                 <div style="margin-bottom: 24px; border: 1px solid var(--line); border-radius: 12px; padding: 16px; background: #fff; box-shadow: var(--shadow-sm);">
-                    <!-- ZONA AZUL: FLECHA Y TÍTULO DE CATEGORÍA -->
                     <div onclick="toggleCategoriaColapsar('${escapar(cat)}')" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;">
                         <h3 style="font-size: 1.15rem; color: var(--brand-700); margin: 0; display: flex; align-items: center; gap: 8px;">
                             <span style="font-size: 1rem; color: var(--brand-600);">${flecha}</span>
@@ -479,18 +488,26 @@
                     ? (isNaN(p.precio) ? p.precio : `₡${p.precio}`) 
                     : "Precio a consultar";
 
+                const estaOculto = p.oculto === true;
+                const textoBtnOcultar = estaOculto ? "👁️ Mostrar" : "👁️‍🗨️ Ocultar";
+                const estiloTarjetaOculto = estaOculto ? "opacity: 0.55; border: 2px dashed #cbd5e1;" : "";
+
                 html += `
-                    <div class="device-row" style="margin:0; height: 100%;">
-                        <img src="${escapar(p.imagen)}" alt="Foto" style="width:100%; height:130px; object-fit:cover; border-radius:8px; margin-bottom:10px;" onerror="this.src='logo.jpeg'">
+                    <div class="device-row" style="margin:0; height: 100%; ${estiloTarjetaOculto}">
+                        <div style="position:relative;">
+                            <img src="${escapar(p.imagen)}" alt="Foto" style="width:100%; height:130px; object-fit:cover; border-radius:8px; margin-bottom:10px;" onerror="this.src='logo.jpeg'">
+                            ${estaOculto ? `<span style="position:absolute; top:6px; right:6px; background:#334155; color:#fff; font-size:9px; font-weight:800; padding:2px 6px; border-radius:4px;">OCULTO</span>` : ""}
+                        </div>
                         <strong>${escapar(p.nombre)}</strong>
                         <div style="display:flex;gap:4px;flex-wrap:wrap;margin:4px 0;">
                             ${p.subcategoria ? `<span style="font-size:10px; font-weight:700; background:#dcfce7; color:#166534; padding:2px 8px; border-radius:4px;">${escapar(p.subcategoria)}</span>` : '<span style="font-size:10px; font-weight:700; background:#f1f5f9; color:#64748b; padding:2px 8px; border-radius:4px;">General</span>'}
                         </div>
                         <p style="color: var(--brand-700); font-weight:700; margin:4px 0;">${escapar(precioMostrar)}</p>
                         <small class="muted" style="flex: 1;">${escapar(p.descripcion)}</small>
-                        <div style="display: flex; gap: 8px; margin-top: 10px;">
-                            <button class="btn-edit" style="flex:1; justify-content:center;" onclick="prepararEdicion('${p.id}')">✏️ Editar</button>
-                            <button class="btn-delete" style="flex:1; justify-content:center;" onclick="eliminarProducto('${p.id}')">🗑 Eliminar</button>
+                        <div style="display: flex; gap: 6px; margin-top: 10px;">
+                            <button class="btn-edit" style="flex:1; justify-content:center; font-size:11px; padding:6px;" onclick="prepararEdicion('${p.id}')">✏️ Editar</button>
+                            <button class="btn-neutral" style="flex:1; justify-content:center; font-size:11px; padding:6px; background:#f8fafc; color:#0f1f2e;" onclick="toggleOcultarProducto('${p.id}', ${estaOculto})">${textoBtnOcultar}</button>
+                            <button class="btn-delete" style="flex:1; justify-content:center; font-size:11px; padding:6px;" onclick="eliminarProducto('${p.id}')">🗑</button>
                         </div>
                     </div>
                 `;
