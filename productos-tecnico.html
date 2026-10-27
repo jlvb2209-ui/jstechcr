@@ -111,8 +111,13 @@
         </section>
         
         <section class="card">
-            <h3>Productos Publicados Actualmente</h3>
-            <div id="listaProductosTecnico" style="margin-top: 20px;" aria-live="polite">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+                <h3 style="margin: 0;">Productos Publicados Actualmente</h3>
+                <div style="flex: 1; min-width: 240px; max-width: 360px;">
+                    <input type="search" id="busquedaProductosTecnico" placeholder="🔍 Buscar por nombre o descripción..." style="padding: 8px 12px; font-size: 13px; border-radius: 8px;">
+                </div>
+            </div>
+            <div id="listaProductosTecnico" style="margin-top: 10px;" aria-live="polite">
                 Cargando productos...
             </div>
         </section>
@@ -144,6 +149,7 @@
     const vistaPrevia = document.getElementById("vistaPreviaProducto");
     const mensaje = document.getElementById("mensajeProducto");
     const contenedorLista = document.getElementById("listaProductosTecnico");
+    const inputBusquedaTecnico = document.getElementById("busquedaProductosTecnico");
     
     const selectCategoria = document.getElementById("p_categoria");
     const selectSubcategoria = document.getElementById("p_subcategoria");
@@ -167,8 +173,10 @@
 
     let subcategoriasCache = [];
     let productosCache = {};
+    let productosInstantaneos = [];
     let editandoId = null;
     let imagenActualUrl = "";
+    let categoriasColapsadas = {}; // Almacena qué categorías están ocultas
 
     function escapar(valor) {
         return String(valor ?? "").replace(/[&<>"']/g, caracter => ({
@@ -276,7 +284,6 @@
         }
     });
 
-    // Función para cargar los datos del producto a editar
     window.prepararEdicion = (id) => {
         const p = productosCache[id];
         if (!p) return;
@@ -397,28 +404,73 @@
 
     onSnapshot(query(collection(db, "products"), orderBy("creado", "desc")), snapshot => {
         productosCache = {};
-        if (snapshot.empty) {
-            contenedorLista.innerHTML = `<p class="muted">No hay productos publicados todavía.</p>`;
-            return;
-        }
-        let porCategoria = {};
+        productosInstantaneos = [];
         snapshot.forEach(docSnap => {
             const p = docSnap.data();
             const id = docSnap.id;
             productosCache[id] = { id, ...p };
+            productosInstantaneos.push({ id, ...p });
+        });
+        renderizarProductosTecnico();
+    });
+
+    if (inputBusquedaTecnico) {
+        inputBusquedaTecnico.addEventListener("input", renderizarProductosTecnico);
+    }
+
+    window.toggleCategoriaColapsar = (catNombre) => {
+        categoriasColapsadas[catNombre] = !categoriasColapsadas[catNombre];
+        renderizarProductosTecnico();
+    };
+
+    function renderizarProductosTecnico() {
+        const textoBusqueda = inputBusquedaTecnico ? inputBusquedaTecnico.value.trim().toLowerCase() : "";
+
+        if (productosInstantaneos.length === 0) {
+            contenedorLista.innerHTML = `<p class="muted">No hay productos publicados todavía.</p>`;
+            return;
+        }
+
+        let filtrados = productosInstantaneos;
+        if (textoBusqueda !== "") {
+            filtrados = productosInstantaneos.filter(p => {
+                const nombre = (p.nombre || "").toLowerCase();
+                const desc = (p.descripcion || "").toLowerCase();
+                const cat = (p.categoria || "").toLowerCase();
+                const sub = (p.subcategoria || "").toLowerCase();
+                return nombre.includes(textoBusqueda) || desc.includes(textoBusqueda) || cat.includes(textoBusqueda) || sub.includes(textoBusqueda);
+            });
+        }
+
+        if (filtrados.length === 0) {
+            contenedorLista.innerHTML = `<p class="muted">No se encontraron productos que coincidan con la búsqueda.</p>`;
+            return;
+        }
+
+        let porCategoria = {};
+        filtrados.forEach(p => {
             const cat = p.categoria || "Sin categoría";
             if (!porCategoria[cat]) porCategoria[cat] = [];
-            porCategoria[cat].push({ id, ...p });
+            porCategoria[cat].push(p);
         });
+
         let html = "";
         for (const [cat, productos] of Object.entries(porCategoria)) {
+            const estaColapsada = !!categoriasColapsadas[cat];
+            const flecha = estaColapsada ? "▶" : "▼";
+            const estiloDisplay = estaColapsada ? "display: none;" : "display: grid;";
+
             html += `
-                <div style="margin-bottom: 24px;">
-                    <h3 style="font-size: 1.15rem; color: var(--brand-700); border-bottom: 2px solid var(--brand-100); padding-bottom: 6px; margin-bottom: 14px;">
-                        📦 ${escapar(cat)} (${productos.length} productos)
-                    </h3>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;">
+                <div style="margin-bottom: 24px; border: 1px solid var(--line); border-radius: 10px; padding: 14px; background: #fff;">
+                    <div onclick="toggleCategoriaColapsar('${escapar(cat)}')" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;">
+                        <h3 style="font-size: 1.1rem; color: var(--brand-700); margin: 0;">
+                            📦 ${escapar(cat)} (${productos.length} productos)
+                        </h3>
+                        <span style="font-size: 1.1rem; font-weight: bold; color: var(--brand-700); padding: 4px 10px;">${flecha}</span>
+                    </div>
+                    <div id="cat-content-${escapar(cat)}" style="${estiloDisplay} grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; margin-top: 14px;">
             `;
+
             productos.forEach(p => {
                 const precioMostrar = (p.precio !== undefined && p.precio !== null && p.precio !== "") 
                     ? (isNaN(p.precio) ? p.precio : `₡${p.precio}`) 
@@ -443,7 +495,7 @@
             html += `</div></div>`;
         }
         contenedorLista.innerHTML = html;
-    });
+    }
 
     window.eliminarProducto = async id => {
         if (confirm("¿Estás seguro de eliminar este producto?")) {
