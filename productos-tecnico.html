@@ -9,6 +9,27 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <style>
+        .filter-status-btn {
+            padding: 8px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #334155;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .filter-status-btn:hover {
+            background: #f1f5f9;
+        }
+        .filter-status-btn.active {
+            background: #0f766e;
+            color: #ffffff;
+            border-color: #0f766e;
+        }
+    </style>
 </head>
 <body>
 <div id="ap">
@@ -112,12 +133,18 @@
         
         <section class="card">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 20px; border-bottom: 1px solid var(--line); padding-bottom: 14px;">
-                <h3 style="margin: 0; font-size: 1.25rem;">Productos Publicados Activos</h3>
-                <div style="flex: 1; min-width: 260px; max-width: 400px;">
-                    <input type="search" id="busquedaProductosTecnico" placeholder="🔍 Buscar por nombre o descripción..." style="padding: 10px 14px; font-size: 13px; border-radius: 8px;">
+                <h3 style="margin: 0; font-size: 1.25rem;">Productos Registrados</h3>
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex: 1; justify-content: flex-end;">
+                    <div style="display: flex; gap: 6px;">
+                        <button type="button" class="filter-status-btn active" data-estado="activos">Activos</button>
+                        <button type="button" class="filter-status-btn" data-estado="ocultos">Ocultos</button>
+                        <button type="button" class="filter-status-btn" data-estado="todos">Todos</button>
+                    </div>
+                    <div style="min-width: 200px; max-width: 320px; flex: 1;">
+                        <input type="search" id="busquedaProductosTecnico" placeholder="🔍 Buscar por nombre o descripción..." style="padding: 8px 12px; font-size: 13px; border-radius: 8px; margin: 0;">
+                    </div>
                 </div>
             </div>
-
             <div id="listaProductosTecnico" style="margin-top: 10px;" aria-live="polite">
                 Cargando productos...
             </div>
@@ -165,25 +192,35 @@
     const btnGuardarSubCat = document.getElementById("btnGuardarSubCat");
     const listaSubCategoriasAdmin = document.getElementById("listaSubCategoriasAdmin");
     const lblCatSeleccionada = document.getElementById("lblCatSeleccionada");
-
     const tituloFormProducto = document.getElementById("tituloFormProducto");
     const subtituloFormProducto = document.getElementById("subtituloFormProducto");
     const kickerFormulario = document.getElementById("kickerFormulario");
     const btnSubirProducto = document.getElementById("btnSubirProducto");
     const btnCancelarEdicion = document.getElementById("btnCancelarEdicion");
-
+    
     let subcategoriasCache = [];
     let productosCache = {};
     let productosInstantaneos = [];
     let editandoId = null;
     let imagenActualUrl = "";
     let categoriasColapsadas = {};
+    let filtroEstadoActual = "activos"; // 'activos', 'ocultos', 'todos'
 
     function escapar(valor) {
         return String(valor ?? "").replace(/[&<>"']/g, caracter => ({
             "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
         })[caracter]);
     }
+
+    // Configuración de los botones de filtro por estado
+    document.querySelectorAll(".filter-status-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll(".filter-status-btn").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            filtroEstadoActual = btn.dataset.estado;
+            renderizarProductosTecnico();
+        });
+    });
 
     btnToggleNuevaCat.addEventListener("click", () => {
         const visible = contenedorNuevaCat.style.display === "block";
@@ -290,7 +327,6 @@
         if (!p) return;
         editandoId = id;
         imagenActualUrl = p.imagen;
-
         document.getElementById("p_nombre").value = p.nombre || "";
         document.getElementById("p_precio").value = p.precio !== undefined && p.precio !== null ? p.precio : "";
         selectCategoria.value = p.categoria || "";
@@ -298,7 +334,6 @@
         actualizarSelectSubcategorias();
         selectSubcategoria.value = p.subcategoria || "";
         document.getElementById("p_desc").value = p.descripcion || "";
-
         if (p.imagen) {
             vistaPrevia.innerHTML = `
                 <div style="display:flex; align-items:center; gap:10px;">
@@ -309,13 +344,11 @@
         } else {
             vistaPrevia.innerHTML = "";
         }
-
         kickerFormulario.textContent = "MODIFICAR PRODUCTO";
         tituloFormProducto.textContent = "Editar artículo";
         subtituloFormProducto.textContent = `Actualizando los detalles del producto ID: ${id}`;
         btnSubirProducto.textContent = "Guardar cambios";
         btnCancelarEdicion.style.display = "inline-flex";
-
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -343,15 +376,11 @@
         const subcategoria = selectSubcategoria.value || "";
         const descripcion = document.getElementById("p_desc").value.trim();
         const archivo = fotoInput.files[0];
-
         if (!editandoId && !archivo) return alert("Selecciona una fotografía para el nuevo producto.");
-
         btnSubirProducto.disabled = true;
         btnSubirProducto.textContent = editandoId ? "Actualizando producto..." : "Subiendo a Google Drive...";
-
         try {
             let urlImagenFinal = imagenActualUrl;
-
             if (archivo) {
                 const base64 = await new Promise((resolve, reject) => {
                     const reader = new FileReader();
@@ -368,7 +397,6 @@
                 if (resultado.status !== "success" || !resultado.url) throw new Error("Error al subir imagen.");
                 urlImagenFinal = resultado.url;
             }
-
             if (editandoId) {
                 await updateDoc(doc(db, "products", editandoId), {
                     nombre,
@@ -437,15 +465,21 @@
 
     function renderizarProductosTecnico() {
         const textoBusqueda = inputBusquedaTecnico ? inputBusquedaTecnico.value.trim().toLowerCase() : "";
-
         if (productosInstantaneos.length === 0) {
             contenedorLista.innerHTML = `<p class="muted">No hay productos publicados todavía.</p>`;
             return;
         }
 
-        let filtrados = productosInstantaneos;
+        // 1. Filtrar por Estado (Activos, Ocultos, Todos)
+        let filtrados = productosInstantaneos.filter(p => {
+            if (filtroEstadoActual === "activos") return p.oculto !== true;
+            if (filtroEstadoActual === "ocultos") return p.oculto === true;
+            return true; // 'todos'
+        });
+
+        // 2. Filtrar por Buscador de texto
         if (textoBusqueda !== "") {
-            filtrados = productosInstantaneos.filter(p => {
+            filtrados = filtrados.filter(p => {
                 const nombre = (p.nombre || "").toLowerCase();
                 const desc = (p.descripcion || "").toLowerCase();
                 const cat = (p.categoria || "").toLowerCase();
@@ -455,7 +489,7 @@
         }
 
         if (filtrados.length === 0) {
-            contenedorLista.innerHTML = `<p class="muted">No se encontraron productos que coincidan con la búsqueda.</p>`;
+            contenedorLista.innerHTML = `<p class="muted" style="padding: 20px; text-align: center;">No se encontraron productos que coincidan con los filtros aplicados.</p>`;
             return;
         }
 
@@ -471,7 +505,6 @@
             const estaColapsada = !!categoriasColapsadas[cat];
             const flecha = estaColapsada ? "▶" : "▼";
             const estiloDisplay = estaColapsada ? "display: none;" : "display: grid;";
-
             html += `
                 <div style="margin-bottom: 24px; border: 1px solid var(--line); border-radius: 12px; padding: 16px; background: #fff; box-shadow: var(--shadow-sm);">
                     <div onclick="toggleCategoriaColapsar('${escapar(cat)}')" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;">
@@ -482,16 +515,13 @@
                     </div>
                     <div style="${estiloDisplay} grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; margin-top: 14px;">
             `;
-
             productos.forEach(p => {
                 const precioMostrar = (p.precio !== undefined && p.precio !== null && p.precio !== "") 
                     ? (isNaN(p.precio) ? p.precio : `₡${p.precio}`) 
                     : "Precio a consultar";
-
                 const estaOculto = p.oculto === true;
                 const textoBtnOcultar = estaOculto ? "👁️ Mostrar" : "👁️‍🗨️ Ocultar";
-                const estiloTarjetaOculto = estaOculto ? "opacity: 0.55; border: 2px dashed #cbd5e1;" : "";
-
+                const estiloTarjetaOculto = estaOculto ? "opacity: 0.65; border: 2px dashed #cbd5e1;" : "";
                 html += `
                     <div class="device-row" style="margin:0; height: 100%; ${estiloTarjetaOculto}">
                         <div style="position:relative;">
