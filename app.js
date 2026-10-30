@@ -20,7 +20,6 @@ import {
     signOut,
     onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
 const firebaseConfig = {
     apiKey: "AIzaSyBHdtd1YLq8z_cuVgUDx33Z088okq0Sriw",
     authDomain: "servicio-tecnico-1d91f.firebaseapp.com",
@@ -29,14 +28,11 @@ const firebaseConfig = {
     messagingSenderId: "475926146823",
     appId: "1:475926146823:web:1bd26d301c1ad0d25f5fa2"
 };
-
 const CONFIG = {
     prefijo: "506",
     baseUrl: "https://jstech.co.cr/"
 };
-
 const URL_GOOGLE_DRIVE = "https://script.google.com/macros/s/AKfycbw37r2nI4NiFB2tlE9K31RTFY7fSh30mBMOVlnpGAn0qEow65hztlfxSzVSudGgf2cH1Q/exec";
-
 const ESTADOS = [
     "Recibido",
     "En diagnóstico",
@@ -45,20 +41,17 @@ const ESTADOS = [
     "Listo para entrega",
     "Entregado"
 ];
-
 const app = initializeApp(firebaseConfig);
 const db = initializeFirestore(app, {
     experimentalForceLongPolling: true
 });
 const auth = getAuth(app);
-
 const $ = id => document.getElementById(id);
 let unsubscribe = null;
 let dispositivos = [];
 let contactosMap = {};
 let operacionEnCurso = false;
 let versionDetalle = 0;
-
 function escapar(valor) {
     return String(valor ?? "").replace(/[&<>"']/g, caracter => ({
         "&": "&amp;",
@@ -68,7 +61,6 @@ function escapar(valor) {
         "'": "&#39;"
     })[caracter]);
 }
-
 function formatearFecha(fecha) {
     if (!fecha) return "Fecha no disponible";
     const fechaReal = typeof fecha === "number"
@@ -84,7 +76,6 @@ function formatearFecha(fecha) {
         timeStyle: "short"
     });
 }
-
 function mostrarMensaje(contenedor, mensaje, tipo = "") {
     const el = $(contenedor);
     if (!el) return;
@@ -94,12 +85,10 @@ function mostrarMensaje(contenedor, mensaje, tipo = "") {
         </div>
     `;
 }
-
 function obtenerEstadoSeguro(estado) {
     const indice = ESTADOS.indexOf(estado);
     return indice >= 0 ? indice : 0;
 }
-
 function insignia(estado) {
     return `
         <span class="badge status-${obtenerEstadoSeguro(estado)}">
@@ -107,7 +96,6 @@ function insignia(estado) {
         </span>
     `;
 }
-
 function insigniaPrioridad(prioridad) {
     const tipoPrio = prioridad === "Urgente" ? "prio-urgente" : "prio-normal";
     return `
@@ -116,7 +104,6 @@ function insigniaPrioridad(prioridad) {
         </span>
     `;
 }
-
 function generarCodigo() {
     const caracteres = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
     let codigo = "RP-";
@@ -127,13 +114,11 @@ function generarCodigo() {
     }
     return codigo;
 }
-
 function enlaceCliente(codigo) {
     const url = new URL(CONFIG.baseUrl);
     url.searchParams.set("c", codigo);
     return url.href;
 }
-
 async function copiarTexto(texto) {
     try {
         await navigator.clipboard.writeText(texto);
@@ -142,13 +127,11 @@ async function copiarTexto(texto) {
         window.prompt("Copia este texto:", texto);
     }
 }
-
 function establecerCarga(boton, cargando, textoOriginal) {
     if (!boton) return;
     boton.disabled = cargando;
     boton.textContent = cargando ? "Procesando..." : textoOriginal;
 }
-
 /* =========================
    INICIO DE SESIÓN
 ========================= */
@@ -187,7 +170,6 @@ if (loginForm) {
         }
     });
 }
-
 const btnCerrar = $("bo");
 if (btnCerrar) {
     btnCerrar.addEventListener("click", async () => {
@@ -198,7 +180,6 @@ if (btnCerrar) {
         }
     });
 }
-
 onAuthStateChanged(auth, usuario => {
     const lg = $("lg");
     const ap = $("ap");
@@ -223,7 +204,6 @@ onAuthStateChanged(auth, usuario => {
         unsubscribe = null;
     }
 });
-
 /* =========================
    REGISTRAR DISPOSITIVO
 ========================= */
@@ -245,24 +225,21 @@ if (deviceForm) {
         const serie = $("f_ser").value.trim();
         const costo = $("f_cos").value.trim();
         const prioridad = $("f_prio") ? $("f_prio").value : "Normal";
+        const password = $("f_pass") ? $("f_pass").value.trim() : "";
         const problema = $("f_pro").value.trim();
         const observaciones = $("f_obs") ? $("f_obs").value.trim() : "";
-
         if (!nombre || !marca || !modelo || !problema || !serie || !observaciones) {
             mostrarMensaje("ok", "Por favor completa todos los campos obligatorios.", "error");
             return;
         }
-
         if (costo && (!Number.isFinite(Number(costo)) || Number(costo) < 0)) {
             mostrarMensaje("ok", "El costo debe ser igual o mayor que cero.", "error");
             return;
         }
-
         operacionEnCurso = true;
         establecerCarga(boton, true, "Registrar y generar código");
         const okEl = $("ok");
         if (okEl) okEl.innerHTML = "";
-
         try {
             let codigo = null;
             for (let i = 0; i < 10; i++) {
@@ -276,7 +253,6 @@ if (deviceForm) {
             if (!codigo) {
                 throw new Error("No se pudo generar un código disponible.");
             }
-
             const ahora = Date.now();
             const registro = {
                 codigo,
@@ -289,6 +265,7 @@ if (deviceForm) {
                 observaciones,
                 costo,
                 prioridad,
+                password,
                 estado: ESTADOS[0],
                 creado: ahora,
                 actualizado: ahora,
@@ -299,7 +276,6 @@ if (deviceForm) {
                 }],
                 fotos: []
             };
-
             const lote = writeBatch(db);
             lote.set(doc(db, "repairs", codigo), registro);
             lote.set(doc(db, "contacts", codigo), {
@@ -310,7 +286,6 @@ if (deviceForm) {
                 direccion
             });
             await lote.commit();
-
             if (okEl) {
                 okEl.innerHTML = `
                     <div class="message success">
@@ -355,7 +330,6 @@ if (deviceForm) {
         }
     });
 }
-
 /* =========================
    ESTADÍSTICAS
 ========================= */
@@ -382,7 +356,6 @@ function actualizarEstadisticas() {
         ).length;
     }
 }
-
 /* =========================
    ESCUCHAR FIRESTORE
 ========================= */
@@ -419,7 +392,6 @@ function escucharDispositivos() {
         );
     });
 }
-
 /* =========================
    BÚSQUEDA Y FILTROS
 ========================= */
@@ -431,7 +403,6 @@ const selectFiltroEstado = $("fe");
 if (selectFiltroEstado) {
     selectFiltroEstado.addEventListener("change", renderizarLista);
 }
-
 function renderizarLista() {
     const ls = $("ls");
     if (!ls) return;
@@ -509,7 +480,6 @@ function renderizarLista() {
     `;
     }).join("");
 }
-
 const contenedorLista = $("ls");
 if (contenedorLista) {
     contenedorLista.addEventListener("click", async evento => {
@@ -547,7 +517,6 @@ if (contenedorLista) {
         }
     });
 }
-
 /* =========================
    NOTIFICACIÓN POR WHATSAPP
 ========================= */
@@ -569,7 +538,6 @@ async function enviarNotificacionCliente(codigo, nuevoEstado, nota) {
             
         const mensajeTexto = `Hola ${contacto.cliente}, JS TECH le informa que el estado de su equipo (${codigo}) ha sido actualizado:\n\n Estado: ${nuevoEstado}\n Avance: ${nota}\n\nPuede ver el estado completo aquí:\n${enlaceCliente(codigo)}`;
         
-        // 🚀 Enlace directo para abrir la app de WhatsApp en el celular al instante
         const urlWhatsapp = `whatsapp://send?phone=${numeroCompleto}&text=${encodeURIComponent(mensajeTexto)}`;
         
         window.location.href = urlWhatsapp;
@@ -577,7 +545,6 @@ async function enviarNotificacionCliente(codigo, nuevoEstado, nota) {
         console.error("Error al generar enlace de WhatsApp:", error);
     }
 }
-
 /* =========================
    DETALLES DEL DISPOSITIVO
 ========================= */
@@ -651,6 +618,7 @@ async function abrirDetalle(id, silencioso = false) {
                     <p><strong>Marca / Modelo:</strong> ${escapar(detalleMarcaModelo)}</p>
                     <p><strong>Color:</strong> ${escapar(registro.color || "No especificado")}</p>
                     <p><strong>Serie:</strong> ${escapar(registro.serie || "No especificada")}</p>
+                    <p><strong>Contraseña / Patrón:</strong> ${escapar(registro.password || "No especificada")}</p>
                     <p><strong>Costo estimado:</strong> ₡${escapar(registro.costo || "0.00")}</p>
                     <p><strong>Ingreso:</strong> ${formatearFecha(registro.creado)}</p>
                     <p><strong>Última actualización:</strong> ${formatearFecha(registro.actualizado)}</p>
@@ -775,7 +743,6 @@ async function abrirDetalle(id, silencioso = false) {
         }
     });
 }
-
 /* =========================
    FOTOGRAFÍAS CON GOOGLE DRIVE
 ========================= */
@@ -962,7 +929,6 @@ function configurarFotosGoogleDrive(codigo, fotosIniciales = []) {
         }
     });
 }
-
 /* =========================
    EDITAR DISPOSITIVO Y CONTACTO
 ========================= */
@@ -1036,6 +1002,10 @@ async function abrirEdicion(id) {
                             <option value="Urgente" ${registro.prioridad === "Urgente" ? "selected" : ""}>Urgente</option>
                         </select>
                     </div>
+                    <div class="field">
+                        <label for="e_pass">Contraseña / Patrón</label>
+                        <input id="e_pass" value="${escapar(registro.password || "")}" maxlength="100">
+                    </div>
                 </div>
                 <div class="field" style="margin-top:12px;">
                     <label for="e_pro">Problema reportado *</label>
@@ -1079,6 +1049,7 @@ async function abrirEdicion(id) {
                 serie: serieEditada,
                 costo: $("e_cos").value.trim(),
                 prioridad: $("e_prio").value,
+                password: $("e_pass").value.trim(),
                 problema: $("e_pro").value.trim(),
                 observaciones: obsEditadas,
                 actualizado: ahora
@@ -1103,7 +1074,6 @@ async function abrirEdicion(id) {
         }
     });
 }
-
 /* =========================
    IMPRIMIR TICKET
 ========================= */
@@ -1341,7 +1311,6 @@ function imprimirTicket(codigo, registro, cliente, telefono, telefono2, correo, 
     `);
     ventanaImpresion.document.close();
 }
-
 /* =========================
    INICIALIZADOR PARA DETALLE.HTML
 ========================= */
