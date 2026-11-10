@@ -652,6 +652,7 @@ async function abrirDetalle(id, silencioso = false) {
                         <option value="Estado inicial">Estado inicial</option>
                         <option value="En reparación">En reparación</option>
                         <option value="Trabajo terminado">Trabajo terminado</option>
+                        <option value="En diagnostico">En diagnostico</option>
                         <option value="Otra evidencia">Otra evidencia</option>
                     </select>
                     <label for="fotoCamara" style="margin-top:12px;">Tomar fotografía con cámara</label>
