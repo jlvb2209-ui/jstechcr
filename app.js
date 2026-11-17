@@ -20,6 +20,7 @@ import {
     signOut,
     onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
 const firebaseConfig = {
     apiKey: "AIzaSyBHdtd1YLq8z_cuVgUDx33Z088okq0Sriw",
     authDomain: "servicio-tecnico-1d91f.firebaseapp.com",
@@ -28,11 +29,14 @@ const firebaseConfig = {
     messagingSenderId: "475926146823",
     appId: "1:475926146823:web:1bd26d301c1ad0d25f5fa2"
 };
+
 const CONFIG = {
     prefijo: "506",
     baseUrl: "https://jstech.co.cr/"
 };
+
 const URL_GOOGLE_DRIVE = "https://script.google.com/macros/s/AKfycbw37r2nI4NiFB2tlE9K31RTFY7fSh30mBMOVlnpGAn0qEow65hztlfxSzVSudGgf2cH1Q/exec";
+
 const ESTADOS = [
     "Recibido",
     "En diagnóstico",
@@ -41,26 +45,26 @@ const ESTADOS = [
     "Listo para entrega",
     "Entregado"
 ];
+
 const app = initializeApp(firebaseConfig);
 const db = initializeFirestore(app, {
     experimentalForceLongPolling: true
 });
 const auth = getAuth(app);
 const $ = id => document.getElementById(id);
+
 let unsubscribe = null;
 let dispositivos = [];
 let contactosMap = {};
 let operacionEnCurso = false;
 let versionDetalle = 0;
+
 function escapar(valor) {
-    return String(valor ?? "").replace(/[&<>"']/g, caracter => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
-    })[caracter]);
+    const div = document.createElement("div");
+    div.textContent = String(valor ?? "");
+    return div.innerHTML.replace(/"/g, "\u0026quot;").replace(/'/g, "\u0026#39;");
 }
+
 function formatearFecha(fecha) {
     if (!fecha) return "Fecha no disponible";
     const fechaReal = typeof fecha === "number"
@@ -76,6 +80,7 @@ function formatearFecha(fecha) {
         timeStyle: "short"
     });
 }
+
 function mostrarMensaje(contenedor, mensaje, tipo = "") {
     const el = $(contenedor);
     if (!el) return;
@@ -85,10 +90,12 @@ function mostrarMensaje(contenedor, mensaje, tipo = "") {
         </div>
     `;
 }
+
 function obtenerEstadoSeguro(estado) {
     const indice = ESTADOS.indexOf(estado);
     return indice >= 0 ? indice : 0;
 }
+
 function insignia(estado) {
     return `
         <span class="badge status-${obtenerEstadoSeguro(estado)}">
@@ -96,6 +103,7 @@ function insignia(estado) {
         </span>
     `;
 }
+
 function insigniaPrioridad(prioridad) {
     const tipoPrio = prioridad === "Urgente" ? "prio-urgente" : "prio-normal";
     return `
@@ -104,6 +112,7 @@ function insigniaPrioridad(prioridad) {
         </span>
     `;
 }
+
 function generarCodigo() {
     const caracteres = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
     let codigo = "RP-";
@@ -114,11 +123,13 @@ function generarCodigo() {
     }
     return codigo;
 }
+
 function enlaceCliente(codigo) {
     const url = new URL(CONFIG.baseUrl);
     url.searchParams.set("c", codigo);
     return url.href;
 }
+
 async function copiarTexto(texto) {
     try {
         await navigator.clipboard.writeText(texto);
@@ -127,11 +138,13 @@ async function copiarTexto(texto) {
         window.prompt("Copia este texto:", texto);
     }
 }
+
 function establecerCarga(boton, cargando, textoOriginal) {
     if (!boton) return;
     boton.disabled = cargando;
     boton.textContent = cargando ? "Procesando..." : textoOriginal;
 }
+
 /* =========================
    INICIO DE SESIÓN
 ========================= */
@@ -170,6 +183,7 @@ if (loginForm) {
         }
     });
 }
+
 const btnCerrar = $("bo");
 if (btnCerrar) {
     btnCerrar.addEventListener("click", async () => {
@@ -180,6 +194,7 @@ if (btnCerrar) {
         }
     });
 }
+
 onAuthStateChanged(auth, usuario => {
     const lg = $("lg");
     const ap = $("ap");
@@ -196,7 +211,9 @@ onAuthStateChanged(auth, usuario => {
         const ls = $("ls");
         if (ls) ls.textContent = "Inicia sesión para consultar los equipos.";
         const dt = $("dt");
-        if (dt) dt.innerHTML = "";
+        if (dt && !window.location.pathname.includes("detalle.html") && !window.location.pathname.includes("editar.html")) {
+            dt.innerHTML = "";
+        }
         actualizarEstadisticas();
     }
     if (unsubscribe && !usuario) {
@@ -204,6 +221,7 @@ onAuthStateChanged(auth, usuario => {
         unsubscribe = null;
     }
 });
+
 /* =========================
    REGISTRAR DISPOSITIVO
 ========================= */
@@ -228,6 +246,7 @@ if (deviceForm) {
         const password = $("f_pass") ? $("f_pass").value.trim() : "";
         const problema = $("f_pro").value.trim();
         const observaciones = $("f_obs") ? $("f_obs").value.trim() : "";
+
         if (!nombre || !marca || !modelo || !problema || !serie || !observaciones) {
             mostrarMensaje("ok", "Por favor completa todos los campos obligatorios.", "error");
             return;
@@ -236,10 +255,12 @@ if (deviceForm) {
             mostrarMensaje("ok", "El costo debe ser igual o mayor que cero.", "error");
             return;
         }
+
         operacionEnCurso = true;
         establecerCarga(boton, true, "Registrar y generar código");
         const okEl = $("ok");
         if (okEl) okEl.innerHTML = "";
+
         try {
             let codigo = null;
             for (let i = 0; i < 10; i++) {
@@ -286,6 +307,7 @@ if (deviceForm) {
                 direccion
             });
             await lote.commit();
+
             if (okEl) {
                 okEl.innerHTML = `
                     <div class="message success">
@@ -330,6 +352,7 @@ if (deviceForm) {
         }
     });
 }
+
 /* =========================
    ESTADÍSTICAS
 ========================= */
@@ -356,12 +379,15 @@ function actualizarEstadisticas() {
         ).length;
     }
 }
+
 /* =========================
    ESCUCHAR FIRESTORE
 ========================= */
 function escucharDispositivos() {
     const ls = $("ls");
+    if (!ls && !$("s1")) return;
     if (ls) ls.textContent = "Cargando dispositivos...";
+
     const consulta = query(
         collection(db, "repairs"),
         orderBy("creado", "desc"),
@@ -392,6 +418,7 @@ function escucharDispositivos() {
         );
     });
 }
+
 /* =========================
    BÚSQUEDA Y FILTROS
 ========================= */
@@ -403,6 +430,7 @@ const selectFiltroEstado = $("fe");
 if (selectFiltroEstado) {
     selectFiltroEstado.addEventListener("change", renderizarLista);
 }
+
 function renderizarLista() {
     const ls = $("ls");
     if (!ls) return;
@@ -480,6 +508,7 @@ function renderizarLista() {
     `;
     }).join("");
 }
+
 const contenedorLista = $("ls");
 if (contenedorLista) {
     contenedorLista.addEventListener("click", async evento => {
@@ -488,6 +517,7 @@ if (contenedorLista) {
         const btnVer = evento.target.closest(".view-device");
         const id = (btnEliminar || btnEditar || btnVer)?.dataset.id;
         if (!id) return;
+
         if (btnEliminar) {
             evento.preventDefault();
             if (!window.confirm(`¿Seguro que deseas eliminar el dispositivo ${id}?`)) {
@@ -505,11 +535,13 @@ if (contenedorLista) {
             }
             return;
         }
+
         if (btnEditar) {
             evento.preventDefault();
-            abrirEdicion(id);
+            window.location.href = `editar.html?c=${encodeURIComponent(id)}`;
             return;
         }
+
         if (btnVer) {
             evento.preventDefault();
             window.location.href = `detalle.html?c=${encodeURIComponent(id)}`;
@@ -517,6 +549,7 @@ if (contenedorLista) {
         }
     });
 }
+
 /* =========================
    NOTIFICACIÓN POR WHATSAPP
 ========================= */
@@ -545,6 +578,7 @@ async function enviarNotificacionCliente(codigo, nuevoEstado, nota) {
         console.error("Error al generar enlace de WhatsApp:", error);
     }
 }
+
 /* =========================
    DETALLES DEL DISPOSITIVO
 ========================= */
@@ -637,7 +671,6 @@ async function abrirDetalle(id, silencioso = false) {
                     </div>
                 `).join("")}
             </div>
-            <!-- APARTADO DE FOTOGRAFÍAS (GOOGLE DRIVE) -->
             <section class="card" style="margin-top:24px;">
                 <h3>📸 Fotos del dispositivo (Google Drive)</h3>
                 <p class="muted">
@@ -744,6 +777,7 @@ async function abrirDetalle(id, silencioso = false) {
         }
     });
 }
+
 /* =========================
    FOTOGRAFÍAS CON GOOGLE DRIVE
 ========================= */
@@ -930,12 +964,28 @@ function configurarFotosGoogleDrive(codigo, fotosIniciales = []) {
         }
     });
 }
+
 /* =========================
-   EDITAR DISPOSITIVO Y CONTACTO
+   EDITAR DISPOSITIVO Y CONTACTO (EN EDITAR.HTML)
 ========================= */
 async function abrirEdicion(id) {
-    const registro = dispositivos.find(r => r.id === id);
-    if (!registro) return;
+    const dt = $("dt");
+    if (!dt) return;
+    dt.innerHTML = `<div class="message">Cargando datos del equipo...</div>`;
+
+    let registro = null;
+    try {
+        const docSnap = await getDoc(doc(db, "repairs", id));
+        if (!docSnap.exists()) {
+            dt.innerHTML = `<div class="message error">No se encontró el dispositivo especificado.</div>`;
+            return;
+        }
+        registro = { id: docSnap.id, ...docSnap.data() };
+    } catch (error) {
+        dt.innerHTML = `<div class="message error">Error al cargar el dispositivo: ${escapar(error.message)}</div>`;
+        return;
+    }
+
     let contacto = {
         cliente: "",
         telefono: "",
@@ -951,8 +1001,12 @@ async function abrirEdicion(id) {
     } catch (error) {
         console.warn("No se pudo cargar el contacto para editar:", error);
     }
-    const dt = $("dt");
-    if (!dt) return;
+
+    const tituloEditar = $("tituloEditar");
+    if (tituloEditar) {
+        tituloEditar.textContent = `Editando: ${registro.id}`;
+    }
+
     dt.innerHTML = `
         <article class="card edit-card">
             <div class="section-heading">
@@ -968,7 +1022,7 @@ async function abrirEdicion(id) {
             <form id="formEdicao">
                 <div class="form-grid">
                     <div class="field">
-                        <label for="e_cli">Nombre del cliente</label>
+                        <label for="e_cli">Nombre del cliente *</label>
                         <input id="e_cli" value="${escapar(contacto.cliente || "")}" required>
                     </div>
                     <div class="field">
@@ -1017,20 +1071,17 @@ async function abrirEdicion(id) {
                     <textarea id="e_obs" rows="3" required>${escapar(registro.observaciones || "")}</textarea>
                 </div>
                 <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">
-                    <button class="btn btn-primary" type="submit">Guardar cambios</button>
+                    <button class="btn btn-primary" type="submit" id="btnGuardarEdicion">Guardar cambios</button>
                     <button class="btn btn-neutral" type="button" id="cancelarEdicion">Cancelar</button>
                 </div>
             </form>
         </article>
     `;
+
     $("cancelarEdicion").addEventListener("click", () => {
-        if (window.location.pathname.includes("detalle.html")) {
-            window.location.href = "dispositivos.html";
-        } else {
-            const dtEl = $("dt");
-            if (dtEl) dtEl.innerHTML = "";
-        }
+        window.location.href = "dispositivos.html";
     });
+
     $("formEdicao").addEventListener("submit", async ev => {
         ev.preventDefault();
         const marcaEditada = $("e_mar").value.trim();
@@ -1041,6 +1092,9 @@ async function abrirEdicion(id) {
             alert("Los campos Marca, Modelo, Serie y Observaciones iniciales son obligatorios.");
             return;
         }
+        const btnGuardar = $("btnGuardarEdicion");
+        establecerCarga(btnGuardar, true, "Guardar cambios");
+
         try {
             const ahora = Date.now();
             await updateDoc(doc(db, "repairs", id), {
@@ -1063,18 +1117,14 @@ async function abrirEdicion(id) {
                 telefono: nuevoTelefono
             });
             alert("Dispositivo y contacto actualizados con éxito.");
-            
-            if (window.location.pathname.includes("detalle.html")) {
-                abrirDetalle(id, true);
-            } else {
-                const dtEl = $("dt");
-                if (dtEl) dtEl.innerHTML = "";
-            }
+            window.location.href = "dispositivos.html";
         } catch (error) {
             alert("Error al actualizar: " + error.message);
+            establecerCarga(btnGuardar, false, "Guardar cambios");
         }
     });
 }
+
 /* =========================
    IMPRIMIR TICKET
 ========================= */
@@ -1216,8 +1266,6 @@ function imprimirTicket(codigo, registro, cliente, telefono, telefono2, correo, 
         </head>
         <body onload="window.print(); window.close();">
             <div class="ticket-container">
-                
-                <!-- BLOQUE 1: DATOS GENERALES Y DEL EQUIPO -->
                 <div class="bloque-seccion">
                     <div class="header-ticket">
                         <h2>JS TECH</h2>
@@ -1262,18 +1310,15 @@ function imprimirTicket(codigo, registro, cliente, telefono, telefono2, correo, 
                         <tr>
                             <td colspan="4" class="seccion-tabla"><strong>Observaciones iniciales:</strong><br>${escapar(registro.observaciones || "Ninguna")}</td>
                         </tr>
-                        
                     </table>
                     <div class="footer-ticket">
                         <p>ventasjystechnology@gmail.com</p>
                     </div>
                 </div>
-                <!-- BLOQUE 2: CÓDIGO GRANDE Y CENTRADO -->
                 <div class="bloque-codigo">
                     <span style="font-size: 11px; font-weight: bold; color: #2b5797; text-transform: uppercase;">Código de Seguimiento</span>
                     <div class="codigo-destacado">${escapar(codigo)}</div>
                 </div>
-                <!-- BLOQUE 3: POLÍTICAS Y FIRMAS -->
                 <div class="bloque-seccion">
                     <div class="header-ticket">
                         <h2>JS TECH</h2>
@@ -1312,16 +1357,29 @@ function imprimirTicket(codigo, registro, cliente, telefono, telefono2, correo, 
     `);
     ventanaImpresion.document.close();
 }
+
 /* =========================
-   INICIALIZADOR PARA DETALLE.HTML
+   INICIALIZADOR PARA DETALLE.HTML Y EDITAR.HTML
 ========================= */
 document.addEventListener("DOMContentLoaded", () => {
     const params = new URLSearchParams(window.location.search);
     const codigoEquipo = params.get("c");
-    if (codigoEquipo && window.location.pathname.includes("detalle.html")) {
+    const path = window.location.pathname;
+
+    if (codigoEquipo && path.includes("detalle.html")) {
         onAuthStateChanged(auth, usuario => {
             if (usuario) {
                 abrirDetalle(codigoEquipo, false);
+            } else {
+                window.location.href = "dispositivos.html";
+            }
+        });
+    }
+
+    if (codigoEquipo && path.includes("editar.html")) {
+        onAuthStateChanged(auth, usuario => {
+            if (usuario) {
+                abrirEdicion(codigoEquipo);
             } else {
                 window.location.href = "dispositivos.html";
             }
