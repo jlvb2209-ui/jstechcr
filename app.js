@@ -47,15 +47,42 @@ const ESTADOS = [
     "Entregado"
 ];
 
-const PROCEDIMIENTOS_REPARACION = [
+const PROCEDIMIENTOS_BASE = [
+    "Mantenimiento",
     "Cambio de pantalla",
     "Cambio de batería",
     "Cambio de pin de carga",
-    "Limpieza y mantenimiento",
     "Reinstalación de sistema",
-    "Reparación en placa / microsoldadura",
-    "Otro procedimiento"
+    "Diagnóstico / placa"
 ];
+
+const CLAVE_PROCEDIMIENTOS_EXTRA = "jstech_procedimientos_extra_v1";
+
+function obtenerProcedimientosExtra() {
+    try {
+        const raw = localStorage.getItem(CLAVE_PROCEDIMIENTOS_EXTRA);
+        const parsed = JSON.parse(raw || "[]");
+        return Array.isArray(parsed)
+            ? parsed.map(x => String(x || "").trim()).filter(Boolean)
+            : [];
+    } catch {
+        return [];
+    }
+}
+
+function guardarProcedimientosExtra(lista) {
+    const limpios = [...new Set(
+        (Array.isArray(lista) ? lista : [])
+            .map(x => String(x || "").trim())
+            .filter(x => x && !PROCEDIMIENTOS_BASE.some(b => b.toLowerCase() === x.toLowerCase()))
+    )];
+    localStorage.setItem(CLAVE_PROCEDIMIENTOS_EXTRA, JSON.stringify(limpios));
+    return limpios;
+}
+
+function obtenerTodosLosProcedimientos() {
+    return [...PROCEDIMIENTOS_BASE, ...obtenerProcedimientosExtra()];
+}
 
 const app = initializeApp(firebaseConfig);
 const db = initializeFirestore(app, {
@@ -664,14 +691,21 @@ async function abrirDetalle(id, silencioso = false) {
             </div>
             <h3>Historial y progreso</h3>
             <div class="history">
-                ${historial.map(h => `
+                ${historial.map(h => {
+                    const lineaPrincipal = `${h.estado}${h.nota ? ` — ${h.nota}` : ""}`;
+                    const procTexto = h.procedimiento
+                        ? h.procedimiento.toLowerCase().startsWith("procedimiento:")
+                            ? h.procedimiento
+                            : `Procedimiento: ${h.procedimiento}`
+                        : "";
+                    return `
                     <div class="history-item">
-                        <strong>${escapar(h.estado)}</strong>
-                        ${h.procedimiento ? `<p style="margin:2px 0;"><strong>Procedimiento:</strong> ${escapar(h.procedimiento)}</p>` : ""}
-                        ${h.nota ? `<p style="margin:2px 0;">${escapar(h.nota)}</p>` : ""}
+                        <div><strong>${escapar(lineaPrincipal)}</strong></div>
+                        ${procTexto ? `<div style="margin-top:2px;">${escapar(procTexto)}</div>` : ""}
                         <small>${formatearFecha(h.fecha)}</small>
                     </div>
-                `).join("")}
+                `;
+                }).join("")}
             </div>
             <section class="card" style="margin-top:24px;">
                 <h3>📸 Fotos del dispositivo (Google Drive)</h3>
@@ -738,14 +772,20 @@ async function abrirDetalle(id, silencioso = false) {
                 </div>
                 <div class="field" id="bloqueProcedimiento" style="display: none; margin-top: 12px;">
                     <label for="procedimientoEstado">Procedimiento</label>
-                    <select id="procedimientoEstado">
-                        <option value="">Selecciona un procedimiento...</option>
-                        ${PROCEDIMIENTOS_REPARACION.map(p => `
-                            <option value="${escapar(p)}" ${registro.procedimiento === p ? "selected" : ""}>
-                                ${escapar(p)}
-                            </option>
-                        `).join("")}
-                    </select>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <select id="procedimientoEstado" style="flex:1;min-width:200px;"></select>
+                        <button class="btn btn-neutral" type="button" id="btnQuitarProcedimiento">
+                            Quitar seleccionado
+                        </button>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;">
+                        <input id="nuevoProcedimientoInput"
+                               placeholder="Nuevo procedimiento (ej: Reballing)..."
+                               style="flex:1;min-width:200px;">
+                        <button class="btn btn-neutral" type="button" id="btnAgregarProcedimiento">
+                            ＋ Agregar
+                        </button>
+                    </div>
                 </div>
                 <button class="btn btn-primary" type="submit" style="margin-top:12px;">
                     Guardar cambios
@@ -771,15 +811,87 @@ async function abrirDetalle(id, silencioso = false) {
     const selectNuevoEstado = $("nuevoEstado");
     const bloqueProcedimiento = $("bloqueProcedimiento");
     const selectProcedimiento = $("procedimientoEstado");
+    const inputNuevoProc = $("nuevoProcedimientoInput");
+    const btnAgregarProc = $("btnAgregarProcedimiento");
+    const btnQuitarProc = $("btnQuitarProcedimiento");
+
+    function poblarProcedimientos(seleccionDeseada = "") {
+        if (!selectProcedimiento) return;
+        const todos = obtenerTodosLosProcedimientos();
+        const extra = obtenerProcedimientosExtra();
+        selectProcedimiento.innerHTML =
+            `<option value="">Selecciona un procedimiento...</option>` +
+            todos.map(p => `<option value="${escapar(p)}">${escapar(p)}</option>`).join("");
+        if (seleccionDeseada && todos.includes(seleccionDeseada)) {
+            selectProcedimiento.value = seleccionDeseada;
+        }
+        if (btnQuitarProc) {
+            const actual = selectProcedimiento.value;
+            const esExtra = extra.some(x => x.toLowerCase() === actual.toLowerCase());
+            btnQuitarProc.disabled = !esExtra;
+            btnQuitarProc.title = esExtra
+                ? "Quitar procedimiento personalizado"
+                : "Los procedimientos base son permanentes; solo puedes quitar los que agregues";
+        }
+    }
 
     function actualizarVisibilidadProcedimiento() {
         if (!selectNuevoEstado || !bloqueProcedimiento) return;
         const esReparacion = selectNuevoEstado.value === "En reparación";
         bloqueProcedimiento.style.display = esReparacion ? "block" : "none";
-        if (!esReparacion && selectProcedimiento) {
+        if (esReparacion) {
+            poblarProcedimientos(registro.procedimiento || "");
+        } else if (selectProcedimiento) {
             selectProcedimiento.value = "";
         }
     }
+
+    btnAgregarProc?.addEventListener("click", () => {
+        if (!inputNuevoProc) return;
+        const nombreProc = inputNuevoProc.value.trim();
+        if (!nombreProc) return;
+        const actualExtra = obtenerProcedimientosExtra();
+        const yaExiste = obtenerTodosLosProcedimientos().some(
+            p => p.toLowerCase() === nombreProc.toLowerCase()
+        );
+        if (!yaExiste) {
+            guardarProcedimientosExtra([...actualExtra, nombreProc]);
+        }
+        inputNuevoProc.value = "";
+        poblarProcedimientos(nombreProc);
+    });
+
+    inputNuevoProc?.addEventListener("keydown", e => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            btnAgregarProc?.click();
+        }
+    });
+
+    selectProcedimiento?.addEventListener("change", () => {
+        if (!btnQuitarProc || !selectProcedimiento) return;
+        const extra = obtenerProcedimientosExtra();
+        const actual = selectProcedimiento.value;
+        btnQuitarProc.disabled = !extra.some(x => x.toLowerCase() === actual.toLowerCase());
+    });
+
+    btnQuitarProc?.addEventListener("click", () => {
+        if (!selectProcedimiento) return;
+        const seleccionado = selectProcedimiento.value;
+        if (!seleccionado) return;
+        const esBase = PROCEDIMIENTOS_BASE.some(
+            b => b.toLowerCase() === seleccionado.toLowerCase()
+        );
+        if (esBase) {
+            alert("Ese procedimiento es permanente y no se puede quitar.");
+            return;
+        }
+        const restantes = obtenerProcedimientosExtra().filter(
+            x => x.toLowerCase() !== seleccionado.toLowerCase()
+        );
+        guardarProcedimientosExtra(restantes);
+        poblarProcedimientos("");
+    });
 
     selectNuevoEstado?.addEventListener("change", actualizarVisibilidadProcedimiento);
     actualizarVisibilidadProcedimiento();
