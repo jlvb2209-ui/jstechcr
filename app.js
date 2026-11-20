@@ -47,48 +47,15 @@ const ESTADOS = [
     "Entregado"
 ];
 
-const PROCEDIMIENTOS_BASE = [
-    "Mantenimiento",
-    "Cambio de pantalla",
-    "Cambio de batería",
-    "Cambio de pin de carga",
-    "Reinstalación de sistema",
-    "Diagnóstico / placa"
-];
-
-const CLAVE_PROCEDIMIENTOS_EXTRA = "jstech_procedimientos_extra_v1";
-
-function obtenerProcedimientosExtra() {
-    try {
-        const raw = localStorage.getItem(CLAVE_PROCEDIMIENTOS_EXTRA);
-        const parsed = JSON.parse(raw || "[]");
-        return Array.isArray(parsed)
-            ? parsed.map(x => String(x || "").trim()).filter(Boolean)
-            : [];
-    } catch {
-        return [];
-    }
-}
-
-function guardarProcedimientosExtra(lista) {
-    const limpios = [...new Set(
-        (Array.isArray(lista) ? lista : [])
-            .map(x => String(x || "").trim())
-            .filter(x => x && !PROCEDIMIENTOS_BASE.some(b => b.toLowerCase() === x.toLowerCase()))
-    )];
-    localStorage.setItem(CLAVE_PROCEDIMIENTOS_EXTRA, JSON.stringify(limpios));
-    return limpios;
-}
-
-function obtenerTodosLosProcedimientos() {
-    return [...PROCEDIMIENTOS_BASE, ...obtenerProcedimientosExtra()];
-}
+// Sin procedimientos base fijos: solo se cargan los agregados por el usuario en localStorage
+const STORAGE_KEY_PROCEDIMIENTOS = "jstech_procedimientos_personalizados_v1";
 
 const app = initializeApp(firebaseConfig);
 const db = initializeFirestore(app, {
     experimentalForceLongPolling: true
 });
 const auth = getAuth(app);
+
 const $ = id => document.getElementById(id);
 
 let unsubscribe = null;
@@ -96,6 +63,37 @@ let dispositivos = [];
 let contactosMap = {};
 let operacionEnCurso = false;
 let versionDetalle = 0;
+
+function obtenerProcedimientosPersonalizados() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY_PROCEDIMIENTOS);
+        const parsed = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(parsed)) return [];
+        const limpios = [];
+        const vistos = new Set();
+        for (const item of parsed) {
+            const texto = String(item ?? "").trim();
+            if (!texto) continue;
+            const clave = texto.toLowerCase();
+            if (!vistos.has(clave)) {
+                vistos.add(clave);
+                limpios.push(texto);
+            }
+        }
+        return limpios;
+    } catch (error) {
+        console.warn("No se pudieron leer los procedimientos personalizados:", error);
+        return [];
+    }
+}
+
+function guardarProcedimientosPersonalizados(lista) {
+    try {
+        localStorage.setItem(STORAGE_KEY_PROCEDIMIENTOS, JSON.stringify(lista));
+    } catch (error) {
+        console.warn("No se pudieron guardar los procedimientos personalizados:", error);
+    }
+}
 
 function escapar(valor) {
     const div = document.createElement("div");
@@ -639,6 +637,7 @@ async function abrirDetalle(id, silencioso = false) {
         console.warn("No se pudo cargar el contacto:", error);
     }
     if (miVersion !== versionDetalle) return;
+
     const historial = Array.isArray(registro.historial)
         ? registro.historial
         : [];
@@ -649,6 +648,7 @@ async function abrirDetalle(id, silencioso = false) {
     const detalleMarcaModelo = [registro.marca, registro.modelo]
         .filter(Boolean)
         .join(" ") || "No especificada";
+
     dt.innerHTML = `
         <article class="card detail-card">
             <div class="detail-heading">
@@ -691,21 +691,14 @@ async function abrirDetalle(id, silencioso = false) {
             </div>
             <h3>Historial y progreso</h3>
             <div class="history">
-                ${historial.map(h => {
-                    const lineaPrincipal = `${h.estado}${h.nota ? ` — ${h.nota}` : ""}`;
-                    const procTexto = h.procedimiento
-                        ? h.procedimiento.toLowerCase().startsWith("procedimiento:")
-                            ? h.procedimiento
-                            : `Procedimiento: ${h.procedimiento}`
-                        : "";
-                    return `
+                ${historial.map(h => `
                     <div class="history-item">
-                        <div><strong>${escapar(lineaPrincipal)}</strong></div>
-                        ${procTexto ? `<div style="margin-top:2px;">${escapar(procTexto)}</div>` : ""}
+                        <strong>${escapar(h.estado)}</strong>
+                        ${h.procedimiento ? `<p style="margin:2px 0;"><strong>Procedimiento:</strong> ${escapar(h.procedimiento)}</p>` : ""}
+                        ${h.nota ? `<p style="margin:2px 0;">${escapar(h.nota)}</p>` : ""}
                         <small>${formatearFecha(h.fecha)}</small>
                     </div>
-                `;
-                }).join("")}
+                `).join("")}
             </div>
             <section class="card" style="margin-top:24px;">
                 <h3>📸 Fotos del dispositivo (Google Drive)</h3>
@@ -772,18 +765,21 @@ async function abrirDetalle(id, silencioso = false) {
                 </div>
                 <div class="field" id="bloqueProcedimiento" style="display: none; margin-top: 12px;">
                     <label for="procedimientoEstado">Procedimiento</label>
-                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                        <select id="procedimientoEstado" style="flex:1;min-width:200px;"></select>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                        <select id="procedimientoEstado" style="flex: 1; min-width: 220px;"></select>
                         <button class="btn btn-neutral" type="button" id="btnQuitarProcedimiento">
                             Quitar seleccionado
                         </button>
                     </div>
-                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;">
-                        <input id="nuevoProcedimientoInput"
-                               placeholder="Nuevo procedimiento (ej: Reballing)..."
-                               style="flex:1;min-width:200px;">
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px;">
+                        <input
+                            id="nuevoProcedimiento"
+                            type="text"
+                            placeholder="Nuevo procedimiento..."
+                            style="flex: 1; min-width: 220px;"
+                        >
                         <button class="btn btn-neutral" type="button" id="btnAgregarProcedimiento">
-                            ＋ Agregar
+                            + Agregar
                         </button>
                     </div>
                 </div>
@@ -793,6 +789,7 @@ async function abrirDetalle(id, silencioso = false) {
             </form>
         </article>
     `;
+
     $("btnImprimirDetalle")?.addEventListener("click", () => {
         imprimirTicket(
             registro.id,
@@ -806,92 +803,80 @@ async function abrirDetalle(id, silencioso = false) {
     });
     $("btnCopiarCodigo")?.addEventListener("click", () => copiarTexto(registro.id));
     $("btnCopiarEnlace")?.addEventListener("click", () => copiarTexto(enlaceCliente(registro.id)));
+
     configurarFotosGoogleDrive(registro.id, registro.fotos || []);
 
     const selectNuevoEstado = $("nuevoEstado");
     const bloqueProcedimiento = $("bloqueProcedimiento");
     const selectProcedimiento = $("procedimientoEstado");
-    const inputNuevoProc = $("nuevoProcedimientoInput");
-    const btnAgregarProc = $("btnAgregarProcedimiento");
-    const btnQuitarProc = $("btnQuitarProcedimiento");
+    const inputNuevoProcedimiento = $("nuevoProcedimiento");
+    const btnAgregarProcedimiento = $("btnAgregarProcedimiento");
+    const btnQuitarProcedimiento = $("btnQuitarProcedimiento");
 
-    function poblarProcedimientos(seleccionDeseada = "") {
+    function renderizarOpcionesProcedimiento(seleccionDeseada = "") {
         if (!selectProcedimiento) return;
-        const todos = obtenerTodosLosProcedimientos();
-        const extra = obtenerProcedimientosExtra();
-        selectProcedimiento.innerHTML =
-            `<option value="">Selecciona un procedimiento...</option>` +
-            todos.map(p => `<option value="${escapar(p)}">${escapar(p)}</option>`).join("");
-        if (seleccionDeseada && todos.includes(seleccionDeseada)) {
-            selectProcedimiento.value = seleccionDeseada;
-        }
-        if (btnQuitarProc) {
-            const actual = selectProcedimiento.value;
-            const esExtra = extra.some(x => x.toLowerCase() === actual.toLowerCase());
-            btnQuitarProc.disabled = !esExtra;
-            btnQuitarProc.title = esExtra
-                ? "Quitar procedimiento personalizado"
-                : "Los procedimientos base son permanentes; solo puedes quitar los que agregues";
-        }
+        const personalizados = obtenerProcedimientosPersonalizados();
+        const valorActual = seleccionDeseada || selectProcedimiento.value;
+        const placeholder = personalizados.length
+            ? "Selecciona un procedimiento..."
+            : "Agrega un procedimiento con + Agregar...";
+
+        selectProcedimiento.innerHTML = `
+            <option value="">${escapar(placeholder)}</option>
+            ${personalizados.map(p => `
+                <option value="${escapar(p)}" ${valorActual === p ? "selected" : ""}>
+                    ${escapar(p)}
+                </option>
+            `).join("")}
+        `;
     }
+
+    renderizarOpcionesProcedimiento(registro.procedimiento || "");
+
+    btnAgregarProcedimiento?.addEventListener("click", () => {
+        const nuevo = (inputNuevoProcedimiento?.value || "").trim();
+        if (!nuevo) {
+            alert("Escribe un procedimiento antes de agregarlo.");
+            inputNuevoProcedimiento?.focus();
+            return;
+        }
+        const lista = obtenerProcedimientosPersonalizados();
+        const existente = lista.find(item => item.toLowerCase() === nuevo.toLowerCase());
+        if (!existente) {
+            lista.push(nuevo);
+            guardarProcedimientosPersonalizados(lista);
+        }
+        renderizarOpcionesProcedimiento(existente || nuevo);
+        if (inputNuevoProcedimiento) {
+            inputNuevoProcedimiento.value = "";
+            inputNuevoProcedimiento.focus();
+        }
+    });
+
+    btnQuitarProcedimiento?.addEventListener("click", () => {
+        const seleccionado = (selectProcedimiento?.value || "").trim();
+        if (!seleccionado) {
+            alert("Selecciona un procedimiento de la lista para quitarlo.");
+            return;
+        }
+        if (!confirm(`¿Quitar "${seleccionado}" de tus procedimientos?`)) {
+            return;
+        }
+        const lista = obtenerProcedimientosPersonalizados().filter(
+            item => item.toLowerCase() !== seleccionado.toLowerCase()
+        );
+        guardarProcedimientosPersonalizados(lista);
+        renderizarOpcionesProcedimiento("");
+    });
 
     function actualizarVisibilidadProcedimiento() {
         if (!selectNuevoEstado || !bloqueProcedimiento) return;
         const esReparacion = selectNuevoEstado.value === "En reparación";
         bloqueProcedimiento.style.display = esReparacion ? "block" : "none";
-        if (esReparacion) {
-            poblarProcedimientos(registro.procedimiento || "");
-        } else if (selectProcedimiento) {
+        if (!esReparacion && selectProcedimiento) {
             selectProcedimiento.value = "";
         }
     }
-
-    btnAgregarProc?.addEventListener("click", () => {
-        if (!inputNuevoProc) return;
-        const nombreProc = inputNuevoProc.value.trim();
-        if (!nombreProc) return;
-        const actualExtra = obtenerProcedimientosExtra();
-        const yaExiste = obtenerTodosLosProcedimientos().some(
-            p => p.toLowerCase() === nombreProc.toLowerCase()
-        );
-        if (!yaExiste) {
-            guardarProcedimientosExtra([...actualExtra, nombreProc]);
-        }
-        inputNuevoProc.value = "";
-        poblarProcedimientos(nombreProc);
-    });
-
-    inputNuevoProc?.addEventListener("keydown", e => {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            btnAgregarProc?.click();
-        }
-    });
-
-    selectProcedimiento?.addEventListener("change", () => {
-        if (!btnQuitarProc || !selectProcedimiento) return;
-        const extra = obtenerProcedimientosExtra();
-        const actual = selectProcedimiento.value;
-        btnQuitarProc.disabled = !extra.some(x => x.toLowerCase() === actual.toLowerCase());
-    });
-
-    btnQuitarProc?.addEventListener("click", () => {
-        if (!selectProcedimiento) return;
-        const seleccionado = selectProcedimiento.value;
-        if (!seleccionado) return;
-        const esBase = PROCEDIMIENTOS_BASE.some(
-            b => b.toLowerCase() === seleccionado.toLowerCase()
-        );
-        if (esBase) {
-            alert("Ese procedimiento es permanente y no se puede quitar.");
-            return;
-        }
-        const restantes = obtenerProcedimientosExtra().filter(
-            x => x.toLowerCase() !== seleccionado.toLowerCase()
-        );
-        guardarProcedimientosExtra(restantes);
-        poblarProcedimientos("");
-    });
 
     selectNuevoEstado?.addEventListener("change", actualizarVisibilidadProcedimiento);
     actualizarVisibilidadProcedimiento();
@@ -904,7 +889,7 @@ async function abrirDetalle(id, silencioso = false) {
             ? selectProcedimiento.value.trim()
             : "";
         if (nuevoEstado === "En reparación" && !procedimiento) {
-            alert("Selecciona un procedimiento para el estado En reparación.");
+            alert("Selecciona o agrega un procedimiento para el estado En reparación.");
             selectProcedimiento?.focus();
             return;
         }
@@ -952,11 +937,13 @@ function configurarFotosGoogleDrive(codigo, fotosIniciales = []) {
     }
     let seleccionadas = [];
     let urlsTemporales = [];
+
     function limpiarPrevisualizaciones() {
         urlsTemporales.forEach(url => URL.revokeObjectURL(url));
         urlsTemporales = [];
         vista.innerHTML = "";
     }
+
     function dibujarPrevisualizaciones() {
         limpiarPrevisualizaciones();
         seleccionadas.forEach((archivo, indice) => {
@@ -983,6 +970,7 @@ function configurarFotosGoogleDrive(codigo, fotosIniciales = []) {
             vista.appendChild(tarjeta);
         });
     }
+
     function agregarArchivos(archivos) {
         const permitidos = ["image/jpeg", "image/png", "image/webp"];
         let rechazados = 0;
@@ -998,6 +986,7 @@ function configurarFotosGoogleDrive(codigo, fotosIniciales = []) {
             ? `Se omitieron ${rechazados} archivo(s). Usa JPG, PNG o WEBP de máximo 10MB.`
             : `Imágenes seleccionadas: ${seleccionadas.length}`;
     }
+
     function dibujarGaleria(fotos) {
         const lista = Array.isArray(fotos) ? fotos : [];
         if (!lista.length) {
@@ -1026,6 +1015,7 @@ function configurarFotosGoogleDrive(codigo, fotosIniciales = []) {
             `;
         }).join("");
     }
+
     abrir.addEventListener("click", () => {
         const cerrado = apartado.style.display === "none";
         apartado.style.display = cerrado ? "block" : "none";
@@ -1039,7 +1029,9 @@ function configurarFotosGoogleDrive(codigo, fotosIniciales = []) {
         agregarArchivos(Array.from(galeria.files || []));
         galeria.value = "";
     });
+
     dibujarGaleria(fotosIniciales);
+
     guardar.addEventListener("click", async () => {
         if (!seleccionadas.length) {
             mensaje.textContent = "Primero selecciona al menos una fotografía.";
@@ -1099,6 +1091,7 @@ function configurarFotosGoogleDrive(codigo, fotosIniciales = []) {
             guardar.textContent = "Subir fotografías a Google Drive";
         }
     });
+
     galeriaGuardada.addEventListener("click", async evento => {
         const boton = evento.target.closest("[data-eliminar-foto]");
         if (!boton) return;
