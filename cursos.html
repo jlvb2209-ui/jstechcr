@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JS TECH | Capacitación y Guías</title>
+    <meta name="theme-color" content="#0b3a3c">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<section id="lg" class="login-screen hidden">
+    <div class="login-card">
+        <div class="brand brand-dark">
+            <div class="logo">JS</div>
+            <span>JS TECH</span>
+        </div>
+        <h1>Acceso restringido</h1>
+        <p class="muted">Inicia sesión desde el panel principal para ver los cursos.</p>
+        <a href="index.html" class="btn btn-primary btn-full">Ir al inicio de sesión</a>
+    </div>
+</section>
+
+<div id="ap" class="hidden">
+    <header class="top">
+        <div class="container">
+            <nav class="navbar">
+                <a class="brand" href="index.html">
+                    <div class="logo">JS</div>
+                    <span>JS TECH</span>
+                </a>
+                <div class="nav-right-container">
+                    <div class="nav-buttons">
+                        <a href="index.html" class="btn btn-outline-light">
+                            ← Panel principal
+                        </a>
+                        <a href="dispositivos.html" class="btn btn-outline-light">
+                            Ver dispositivos
+                        </a>
+                        <button class="btn btn-outline-light" id="bo" type="button">
+                            Cerrar sesión
+                        </button>
+                    </div>
+                    <img src="logo.jpeg" alt="Logo JS TECH" class="nav-logo">
+                </div>
+            </nav>
+            <div class="hero-copy">
+                <span class="eyebrow">CENTRO DE CONOCIMIENTO Y CAPACITACIÓN</span>
+                <h1>Módulos y Guías Técnicas</h1>
+                <p>Crea módulos de estudio, organiza temas y consulta procedimientos paso a paso.</p>
+            </div>
+        </div>
+    </header>
+
+    <main class="container main-content">
+        <div style="margin-bottom: 20px; display: flex; justify-content: flex-end;">
+            <button type="button" class="btn btn-primary" id="btnToggleCreadorCurso">
+                ＋ Crear nuevo módulo o tema
+            </button>
+        </div>
+
+        <section id="panelCreadorCurso" class="card hidden">
+            <div class="section-heading">
+                <div>
+                    <span class="section-kicker">ADMINISTRAR CONTENIDO</span>
+                    <h2>Agregar Módulo o Subtítulo</h2>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <form id="formCrearModulo" style="background: #f8fafc; padding: 18px; border-radius: 12px; border: 1px solid var(--line);">
+                    <h4>1. Crear Módulo Principal</h4>
+                    <div class="field">
+                        <label for="c_mod_titulo">Título del módulo *</label>
+                        <input id="c_mod_titulo" placeholder="Ej: Módulo 1: Computadoras personales" required>
+                    </div>
+                    <div class="field">
+                        <label for="c_mod_orden">Número de orden</label>
+                        <input id="c_mod_orden" type="number" min="1" value="1">
+                    </div>
+                    <button type="submit" class="btn btn-secondary btn-full">Guardar Módulo</button>
+                </form>
+
+                <form id="formCrearSubtitulo" style="background: #f8fafc; padding: 18px; border-radius: 12px; border: 1px solid var(--line);">
+                    <h4>2. Agregar Subtítulo / Lección</h4>
+                    <div class="field">
+                        <label for="c_sub_modulo">Seleccionar Módulo *</label>
+                        <select id="c_sub_modulo" required>
+                            <option value="">Cargando módulos...</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="c_sub_titulo">Subtítulo *</label>
+                        <input id="c_sub_titulo" placeholder="Ej: 1.0. Introducción" required>
+                    </div>
+                    <div class="field">
+                        <label for="c_sub_contenido">Información completa *</label>
+                        <textarea id="c_sub_contenido" rows="4" placeholder="Escribe toda la explicación, pasos, enlaces o notas..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">Agregar Subtítulo</button>
+                </form>
+            </div>
+            <div id="msgCurso" aria-live="polite"></div>
+        </section>
+
+        <section id="contenedorModulosCurso" class="curso-lista-modulos">
+            <div class="card">
+                <p class="muted">Cargando módulos del curso...</p>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <span>JS TECH</span>
+            <span>Plataforma interna de capacitación técnica</span>
+        </footer>
+    </main>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>S
