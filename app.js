@@ -2,6 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import {
     initializeFirestore,
     doc,
+    setDoc,
     getDoc,
     updateDoc,
     deleteDoc,
@@ -202,6 +203,7 @@ onAuthStateChanged(auth, usuario => {
         if (lg) lg.classList.add("hidden");
         if (ap) ap.classList.remove("hidden");
         escucharDispositivos();
+        iniciarModuloCursos();
     } else {
         if (lg) lg.classList.remove("hidden");
         if (ap) ap.classList.add("hidden");
@@ -246,7 +248,6 @@ if (deviceForm) {
         const password = $("f_pass") ? $("f_pass").value.trim() : "";
         const problema = $("f_pro").value.trim();
         const observaciones = $("f_obs") ? $("f_obs").value.trim() : "";
-
         if (!nombre || !marca || !modelo || !problema || !serie || !observaciones) {
             mostrarMensaje("ok", "Por favor completa todos los campos obligatorios.", "error");
             return;
@@ -255,12 +256,10 @@ if (deviceForm) {
             mostrarMensaje("ok", "El costo debe ser igual o mayor que cero.", "error");
             return;
         }
-
         operacionEnCurso = true;
         establecerCarga(boton, true, "Registrar y generar código");
         const okEl = $("ok");
         if (okEl) okEl.innerHTML = "";
-
         try {
             let codigo = null;
             for (let i = 0; i < 10; i++) {
@@ -307,7 +306,6 @@ if (deviceForm) {
                 direccion
             });
             await lote.commit();
-
             if (okEl) {
                 okEl.innerHTML = `
                     <div class="message success">
@@ -387,7 +385,6 @@ function escucharDispositivos() {
     const ls = $("ls");
     if (!ls && !$("s1")) return;
     if (ls) ls.textContent = "Cargando dispositivos...";
-
     const consulta = query(
         collection(db, "repairs"),
         orderBy("creado", "desc"),
@@ -517,7 +514,6 @@ if (contenedorLista) {
         const btnVer = evento.target.closest(".view-device");
         const id = (btnEliminar || btnEditar || btnVer)?.dataset.id;
         if (!id) return;
-
         if (btnEliminar) {
             evento.preventDefault();
             if (!window.confirm(`¿Seguro que deseas eliminar el dispositivo ${id}?`)) {
@@ -535,13 +531,11 @@ if (contenedorLista) {
             }
             return;
         }
-
         if (btnEditar) {
             evento.preventDefault();
             window.location.href = `editar.html?c=${encodeURIComponent(id)}`;
             return;
         }
-
         if (btnVer) {
             evento.preventDefault();
             window.location.href = `detalle.html?c=${encodeURIComponent(id)}`;
@@ -557,7 +551,6 @@ async function enviarNotificacionCliente(codigo, nuevoEstado, nota) {
     try {
         const contSnap = await getDoc(doc(db, "contacts", codigo));
         if (!contSnap.exists()) return;
-        
         const contacto = contSnap.data();
         const telefono = contacto.telefono || contacto.telefono2;
         if (!telefono) {
@@ -565,14 +558,11 @@ async function enviarNotificacionCliente(codigo, nuevoEstado, nota) {
             return;
         }
         const numeroLimpio = telefono.replace(/\D/g, "");
-        const numeroCompleto = numeroLimpio.startsWith(CONFIG.prefijo) 
-            ? numeroLimpio 
+        const numeroCompleto = numeroLimpio.startsWith(CONFIG.prefijo)
+            ? numeroLimpio
             : `${CONFIG.prefijo}${numeroLimpio}`;
-            
         const mensajeTexto = `Hola ${contacto.cliente}, JS TECH le informa que el estado de su equipo (${codigo}) ha sido actualizado:\n\n Estado: ${nuevoEstado}\n Avance: ${nota}\n\nPuede ver el estado completo aquí:\n${enlaceCliente(codigo)}`;
-        
         const urlWhatsapp = `whatsapp://send?phone=${numeroCompleto}&text=${encodeURIComponent(mensajeTexto)}`;
-        
         window.location.href = urlWhatsapp;
     } catch (error) {
         console.error("Error al generar enlace de WhatsApp:", error);
@@ -972,7 +962,6 @@ async function abrirEdicion(id) {
     const dt = $("dt");
     if (!dt) return;
     dt.innerHTML = `<div class="message">Cargando datos del equipo...</div>`;
-
     let registro = null;
     try {
         const docSnap = await getDoc(doc(db, "repairs", id));
@@ -985,7 +974,6 @@ async function abrirEdicion(id) {
         dt.innerHTML = `<div class="message error">Error al cargar el dispositivo: ${escapar(error.message)}</div>`;
         return;
     }
-
     let contacto = {
         cliente: "",
         telefono: "",
@@ -1001,12 +989,10 @@ async function abrirEdicion(id) {
     } catch (error) {
         console.warn("No se pudo cargar el contacto para editar:", error);
     }
-
     const tituloEditar = $("tituloEditar");
     if (tituloEditar) {
         tituloEditar.textContent = `Editando: ${registro.id}`;
     }
-
     dt.innerHTML = `
         <article class="card edit-card">
             <div class="section-heading">
@@ -1077,11 +1063,9 @@ async function abrirEdicion(id) {
             </form>
         </article>
     `;
-
     $("cancelarEdicion").addEventListener("click", () => {
         window.location.href = "dispositivos.html";
     });
-
     $("formEdicao").addEventListener("submit", async ev => {
         ev.preventDefault();
         const marcaEditada = $("e_mar").value.trim();
@@ -1094,7 +1078,6 @@ async function abrirEdicion(id) {
         }
         const btnGuardar = $("btnGuardarEdicion");
         establecerCarga(btnGuardar, true, "Guardar cambios");
-
         try {
             const ahora = Date.now();
             await updateDoc(doc(db, "repairs", id), {
@@ -1111,7 +1094,6 @@ async function abrirEdicion(id) {
             });
             const nuevoCliente = $("e_cli").value.trim();
             const nuevoTelefono = $("e_tel").value.trim();
-            
             await updateDoc(doc(db, "contacts", id), {
                 cliente: nuevoCliente,
                 telefono: nuevoTelefono
@@ -1325,11 +1307,10 @@ function imprimirTicket(codigo, registro, cliente, telefono, telefono2, correo, 
                         <p>Frente al Hotel Cañas. Cañas, Guanacaste | Teléfono +506 8638 9553 | Cédula física # 5 0395 0104</p>
                     </div>
                     <h3>Políticas de JS TECH:</h3>
-                    
                     <div class="politicas">
                         <ol>
                             <li>Cada equipo se evaluará primero antes de proceder a realizar alguna instalación, reparación, mantenimiento u otros. Una vez se determine las acciones a realizar, se contactará al cliente para analizar costos y otros.</li>
-                            <li>Una vez ingresado el equipo a taller y entregado este documento, el cliente aprueba que se realice mantenimiento o reparación durante la revisión, si fuese necesario, para determinar el funcionamiento del mismo, aunque no se haya contactado al propietario primero. Se entiende que cada trabajo, sea mantenimiento o reparación durante o posterior a la revisión, reflejara los costos en los misceláneos de la factura final.</li>
+                            <li>Una vez ingresado el equipo a taller y entregado este documento, el cliente aprueba que se realice mantenimiento o reparación durante la revisión, si fuese necesario, para determinar el funcionamiento del mismo, aunque no se haya contactado al propietario primero. Se entiende que cada trabajo, sea mantenimiento o reparación durante o posterior a la revisión, reflejará los costos en los misceláneos de la factura final.</li>
                             <li>La revisión de computadoras, tanto laptops como de escritorio, es gratuita, siempre y cuando no se realice ninguna reparación, mantenimiento, diagnóstico por escrito y/o comprobación de partes durante o posterior a la misma.</li>
                             <li>Toda revisión en impresoras tendrá un valor inicial de ₡5.000, monto que será rebajado en el valor final de la reparación.</li>
                             <li>Una vez que el equipo ingrese al establecimiento se acordará entre ambas partes los plazos correspondientes a revisión, eventual reparación, mantenimiento o instalación, fecha y hora de entrega.</li>
@@ -1359,13 +1340,221 @@ function imprimirTicket(codigo, registro, cliente, telefono, telefono2, correo, 
 }
 
 /* =========================
+   APARTADO DE CURSOS Y GUÍAS (AISLADO PARA CURSOS.HTML)
+========================= */
+let cursosInicializado = false;
+
+function iniciarModuloCursos() {
+    const contenedorModulos = $("contenedorModulosCurso");
+    if (!contenedorModulos || cursosInicializado) return;
+    cursosInicializado = true;
+
+    const btnToggleCreador = $("btnToggleCreadorCurso");
+    const panelCreador = $("panelCreadorCurso");
+    const formModulo = $("formCrearModulo");
+    const formSubtitulo = $("formCrearSubtitulo");
+    const selectModulos = $("c_sub_modulo");
+
+    let listaModulos = [];
+
+    if (btnToggleCreador && panelCreador) {
+        btnToggleCreador.addEventListener("click", () => {
+            panelCreador.classList.toggle("hidden");
+            const abierto = !panelCreador.classList.contains("hidden");
+            btnToggleCreador.textContent = abierto
+                ? "✖ Cerrar formulario"
+                : "＋ Crear nuevo módulo o tema";
+        });
+    }
+
+    const qCursos = query(collection(db, "cursos"), orderBy("orden", "asc"));
+    onSnapshot(qCursos, snapshot => {
+        listaModulos = snapshot.docs.map(d => ({
+            id: d.id,
+            ...d.data()
+        }));
+        actualizarSelectorModulos();
+        renderizarModulosCurso();
+    }, error => {
+        console.error("Error cargando cursos:", error);
+        contenedorModulos.innerHTML = `<div class="message error">No se pudieron cargar los módulos: ${escapar(error.message)}</div>`;
+    });
+
+    function actualizarSelectorModulos() {
+        if (!selectModulos) return;
+        const valorAnterior = selectModulos.value;
+        if (!listaModulos.length) {
+            selectModulos.innerHTML = `<option value="">Primero crea un módulo...</option>`;
+            return;
+        }
+        selectModulos.innerHTML = listaModulos.map(m =>
+            `<option value="${escapar(m.id)}">${escapar(m.titulo)}</option>`
+        ).join("");
+        if (valorAnterior && listaModulos.some(m => m.id === valorAnterior)) {
+            selectModulos.value = valorAnterior;
+        }
+    }
+
+    function renderizarModulosCurso() {
+        if (!listaModulos.length) {
+            contenedorModulos.innerHTML = `
+                <div class="card">
+                    <p class="muted">Aún no hay módulos creados. Usa el botón superior <strong>"＋ Crear nuevo módulo o tema"</strong> para empezar.</p>
+                </div>
+            `;
+            return;
+        }
+
+        contenedorModulos.innerHTML = listaModulos.map(mod => {
+            const subtitulos = Array.isArray(mod.subtitulos) ? mod.subtitulos : [];
+            return `
+                <div class="curso-modulo-card" data-modulo-id="${escapar(mod.id)}">
+                    <button type="button" class="curso-modulo-header">
+                        <div class="curso-modulo-izq">
+                            <div class="curso-modulo-icono-lista">☰</div>
+                            <h3 class="curso-modulo-titulo">${escapar(mod.titulo)}</h3>
+                        </div>
+                        <div class="curso-modulo-flecha">▼</div>
+                    </button>
+
+                    <div class="curso-subtitulos-lista hidden">
+                        ${subtitulos.length ? subtitulos.map((sub, idx) => `
+                            <div class="curso-subtitulo-item">
+                                <button type="button" class="curso-subtitulo-btn">
+                                    <div class="curso-subtitulo-izq">
+                                        <span class="curso-subtitulo-circulo">›</span>
+                                        <span>${escapar(sub.titulo)}</span>
+                                    </div>
+                                </button>
+                                <div class="curso-subtitulo-contenido hidden">
+                                    <div>${escapar(sub.contenido)}</div>
+                                    <div class="curso-acciones-admin">
+                                        <button type="button" class="curso-btn-mini-del btn-borrar-sub" data-mod="${escapar(mod.id)}" data-idx="${idx}">
+                                            🗑 Eliminar tema
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join("") : `
+                            <div style="padding: 16px 24px;" class="muted">
+                                Este módulo aún no tiene subtítulos agregados.
+                            </div>
+                        `}
+                        <div style="padding: 10px 24px; background: #f1f5f9; display: flex; justify-content: flex-end;">
+                            <button type="button" class="curso-btn-mini-del btn-borrar-mod" data-mod="${escapar(mod.id)}">
+                                🗑 Eliminar módulo completo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join("");
+    }
+
+    contenedorModulos.addEventListener("click", async e => {
+        const headerModulo = e.target.closest(".curso-modulo-header");
+        if (headerModulo) {
+            const tarjeta = headerModulo.closest(".curso-modulo-card");
+            const listaSub = tarjeta.querySelector(".curso-subtitulos-lista");
+            tarjeta.classList.toggle("abierto");
+            listaSub.classList.toggle("hidden");
+            return;
+        }
+
+        const btnSub = e.target.closest(".curso-subtitulo-btn");
+        if (btnSub) {
+            const itemSub = btnSub.closest(".curso-subtitulo-item");
+            const contenido = itemSub.querySelector(".curso-subtitulo-contenido");
+            itemSub.classList.toggle("activo");
+            contenido.classList.toggle("hidden");
+            return;
+        }
+
+        const btnBorrarSub = e.target.closest(".btn-borrar-sub");
+        if (btnBorrarSub) {
+            const modId = btnBorrarSub.dataset.mod;
+            const idx = Number(btnBorrarSub.dataset.idx);
+            if (!confirm("¿Eliminar este subtítulo?")) return;
+            try {
+                const modActual = listaModulos.find(m => m.id === modId);
+                if (!modActual) return;
+                const nuevosSub = (modActual.subtitulos || []).filter((_, i) => i !== idx);
+                await updateDoc(doc(db, "cursos", modId), { subtitulos: nuevosSub });
+            } catch (err) {
+                alert("Error al eliminar subtítulo: " + err.message);
+            }
+            return;
+        }
+
+        const btnBorrarMod = e.target.closest(".btn-borrar-mod");
+        if (btnBorrarMod) {
+            const modId = btnBorrarMod.dataset.mod;
+            if (!confirm("¿Seguro que deseas eliminar todo este módulo y sus temas?")) return;
+            try {
+                await deleteDoc(doc(db, "cursos", modId));
+            } catch (err) {
+                alert("Error al eliminar módulo: " + err.message);
+            }
+        }
+    });
+
+    if (formModulo) {
+        formModulo.addEventListener("submit", async e => {
+            e.preventDefault();
+            const titulo = $("c_mod_titulo").value.trim();
+            const orden = Number($("c_mod_orden").value) || 1;
+            if (!titulo) return;
+
+            try {
+                const nuevoId = "MOD-" + Date.now();
+                await setDoc(doc(db, "cursos", nuevoId), {
+                    titulo,
+                    orden,
+                    subtitulos: [],
+                    creado: Date.now()
+                });
+                formModulo.reset();
+                $("c_mod_orden").value = listaModulos.length + 2;
+                mostrarMensaje("msgCurso", "Módulo creado correctamente.", "success");
+            } catch (err) {
+                mostrarMensaje("msgCurso", "Error al crear módulo: " + err.message, "error");
+            }
+        });
+    }
+
+    if (formSubtitulo) {
+        formSubtitulo.addEventListener("submit", async e => {
+            e.preventDefault();
+            const modId = selectModulos.value;
+            const titulo = $("c_sub_titulo").value.trim();
+            const contenido = $("c_sub_contenido").value.trim();
+            if (!modId || !titulo || !contenido) return;
+
+            try {
+                await updateDoc(doc(db, "cursos", modId), {
+                    subtitulos: arrayUnion({
+                        titulo,
+                        contenido,
+                        creado: Date.now()
+                    })
+                });
+                formSubtitulo.reset();
+                selectModulos.value = modId;
+                mostrarMensaje("msgCurso", "Subtítulo agregado al módulo.", "success");
+            } catch (err) {
+                mostrarMensaje("msgCurso", "Error al agregar subtítulo: " + err.message, "error");
+            }
+        });
+    }
+}
+
+/* =========================
    INICIALIZADOR PARA DETALLE.HTML Y EDITAR.HTML
 ========================= */
 document.addEventListener("DOMContentLoaded", () => {
     const params = new URLSearchParams(window.location.search);
     const codigoEquipo = params.get("c");
     const path = window.location.pathname;
-
     if (codigoEquipo && path.includes("detalle.html")) {
         onAuthStateChanged(auth, usuario => {
             if (usuario) {
@@ -1375,7 +1564,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
-
     if (codigoEquipo && path.includes("editar.html")) {
         onAuthStateChanged(auth, usuario => {
             if (usuario) {
