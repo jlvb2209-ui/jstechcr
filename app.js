@@ -47,6 +47,16 @@ const ESTADOS = [
     "Entregado"
 ];
 
+const PROCEDIMIENTOS_REPARACION = [
+    "Cambio de pantalla",
+    "Cambio de batería",
+    "Cambio de pin de carga",
+    "Limpieza y mantenimiento",
+    "Reinstalación de sistema",
+    "Reparación en placa / microsoldadura",
+    "Otro procedimiento"
+];
+
 const app = initializeApp(firebaseConfig);
 const db = initializeFirestore(app, {
     experimentalForceLongPolling: true
@@ -656,7 +666,9 @@ async function abrirDetalle(id, silencioso = false) {
             <div class="history">
                 ${historial.map(h => `
                     <div class="history-item">
-                        <strong>${escapar(h.estado)}</strong>${h.nota ? `<p style="margin:2px 0;">${escapar(h.nota)}</p>` : ""}
+                        <strong>${escapar(h.estado)}</strong>
+                        ${h.procedimiento ? `<p style="margin:2px 0;"><strong>Procedimiento:</strong> ${escapar(h.procedimiento)}</p>` : ""}
+                        ${h.nota ? `<p style="margin:2px 0;">${escapar(h.nota)}</p>` : ""}
                         <small>${formatearFecha(h.fecha)}</small>
                     </div>
                 `).join("")}
@@ -724,6 +736,17 @@ async function abrirDetalle(id, silencioso = false) {
                                required>
                     </div>
                 </div>
+                <div class="field" id="bloqueProcedimiento" style="display: none; margin-top: 12px;">
+                    <label for="procedimientoEstado">Procedimiento</label>
+                    <select id="procedimientoEstado">
+                        <option value="">Selecciona un procedimiento...</option>
+                        ${PROCEDIMIENTOS_REPARACION.map(p => `
+                            <option value="${escapar(p)}" ${registro.procedimiento === p ? "selected" : ""}>
+                                ${escapar(p)}
+                            </option>
+                        `).join("")}
+                    </select>
+                </div>
                 <button class="btn btn-primary" type="submit" style="margin-top:12px;">
                     Guardar cambios
                 </button>
@@ -744,22 +767,53 @@ async function abrirDetalle(id, silencioso = false) {
     $("btnCopiarCodigo")?.addEventListener("click", () => copiarTexto(registro.id));
     $("btnCopiarEnlace")?.addEventListener("click", () => copiarTexto(enlaceCliente(registro.id)));
     configurarFotosGoogleDrive(registro.id, registro.fotos || []);
+
+    const selectNuevoEstado = $("nuevoEstado");
+    const bloqueProcedimiento = $("bloqueProcedimiento");
+    const selectProcedimiento = $("procedimientoEstado");
+
+    function actualizarVisibilidadProcedimiento() {
+        if (!selectNuevoEstado || !bloqueProcedimiento) return;
+        const esReparacion = selectNuevoEstado.value === "En reparación";
+        bloqueProcedimiento.style.display = esReparacion ? "block" : "none";
+        if (!esReparacion && selectProcedimiento) {
+            selectProcedimiento.value = "";
+        }
+    }
+
+    selectNuevoEstado?.addEventListener("change", actualizarVisibilidadProcedimiento);
+    actualizarVisibilidadProcedimiento();
+
     $("formActualizarEstado")?.addEventListener("submit", async ev => {
         ev.preventDefault();
         const nuevoEstado = $("nuevoEstado").value;
         const nota = $("notaEstado").value.trim();
+        const procedimiento = nuevoEstado === "En reparación" && selectProcedimiento
+            ? selectProcedimiento.value.trim()
+            : "";
+        if (nuevoEstado === "En reparación" && !procedimiento) {
+            alert("Selecciona un procedimiento para el estado En reparación.");
+            selectProcedimiento?.focus();
+            return;
+        }
         try {
             const ahora = Date.now();
+            const entradaHistorial = { estado: nuevoEstado, nota, fecha: ahora };
+            if (procedimiento) {
+                entradaHistorial.procedimiento = procedimiento;
+            }
             const nuevoHistorial = [
                 ...(registro.historial || []),
-                { estado: nuevoEstado, nota, fecha: ahora }
+                entradaHistorial
             ];
             await updateDoc(doc(db, "repairs", id), {
                 estado: nuevoEstado,
+                procedimiento,
                 actualizado: ahora,
                 historial: nuevoHistorial
             });
-            await enviarNotificacionCliente(id, nuevoEstado, nota);
+            const detalleNota = procedimiento ? `${nota} (Procedimiento: ${procedimiento})` : nota;
+            await enviarNotificacionCliente(id, nuevoEstado, detalleNota);
             alert("Estado actualizado correctamente.");
             abrirDetalle(id, true);
         } catch (error) {
@@ -1343,20 +1397,16 @@ function imprimirTicket(codigo, registro, cliente, telefono, telefono2, correo, 
    APARTADO DE CURSOS Y GUÍAS (AISLADO PARA CURSOS.HTML)
 ========================= */
 let cursosInicializado = false;
-
 function iniciarModuloCursos() {
     const contenedorModulos = $("contenedorModulosCurso");
     if (!contenedorModulos || cursosInicializado) return;
     cursosInicializado = true;
-
     const btnToggleCreador = $("btnToggleCreadorCurso");
     const panelCreador = $("panelCreadorCurso");
     const formModulo = $("formCrearModulo");
     const formSubtitulo = $("formCrearSubtitulo");
     const selectModulos = $("c_sub_modulo");
-
     let listaModulos = [];
-
     if (btnToggleCreador && panelCreador) {
         btnToggleCreador.addEventListener("click", () => {
             panelCreador.classList.toggle("hidden");
@@ -1366,7 +1416,6 @@ function iniciarModuloCursos() {
                 : "＋ Crear nuevo módulo o tema";
         });
     }
-
     const qCursos = query(collection(db, "cursos"), orderBy("orden", "asc"));
     onSnapshot(qCursos, snapshot => {
         listaModulos = snapshot.docs.map(d => ({
@@ -1379,7 +1428,6 @@ function iniciarModuloCursos() {
         console.error("Error cargando cursos:", error);
         contenedorModulos.innerHTML = `<div class="message error">No se pudieron cargar los módulos: ${escapar(error.message)}</div>`;
     });
-
     function actualizarSelectorModulos() {
         if (!selectModulos) return;
         const valorAnterior = selectModulos.value;
@@ -1394,7 +1442,6 @@ function iniciarModuloCursos() {
             selectModulos.value = valorAnterior;
         }
     }
-
     function renderizarModulosCurso() {
         if (!listaModulos.length) {
             contenedorModulos.innerHTML = `
@@ -1404,7 +1451,6 @@ function iniciarModuloCursos() {
             `;
             return;
         }
-
         contenedorModulos.innerHTML = listaModulos.map(mod => {
             const subtitulos = Array.isArray(mod.subtitulos) ? mod.subtitulos : [];
             return `
@@ -1416,7 +1462,6 @@ function iniciarModuloCursos() {
                         </div>
                         <div class="curso-modulo-flecha">▼</div>
                     </button>
-
                     <div class="curso-subtitulos-lista hidden">
                         ${subtitulos.length ? subtitulos.map((sub, idx) => `
                             <div class="curso-subtitulo-item">
@@ -1450,7 +1495,6 @@ function iniciarModuloCursos() {
             `;
         }).join("");
     }
-
     contenedorModulos.addEventListener("click", async e => {
         const headerModulo = e.target.closest(".curso-modulo-header");
         if (headerModulo) {
@@ -1460,7 +1504,6 @@ function iniciarModuloCursos() {
             listaSub.classList.toggle("hidden");
             return;
         }
-
         const btnSub = e.target.closest(".curso-subtitulo-btn");
         if (btnSub) {
             const itemSub = btnSub.closest(".curso-subtitulo-item");
@@ -1469,7 +1512,6 @@ function iniciarModuloCursos() {
             contenido.classList.toggle("hidden");
             return;
         }
-
         const btnBorrarSub = e.target.closest(".btn-borrar-sub");
         if (btnBorrarSub) {
             const modId = btnBorrarSub.dataset.mod;
@@ -1485,7 +1527,6 @@ function iniciarModuloCursos() {
             }
             return;
         }
-
         const btnBorrarMod = e.target.closest(".btn-borrar-mod");
         if (btnBorrarMod) {
             const modId = btnBorrarMod.dataset.mod;
@@ -1497,14 +1538,12 @@ function iniciarModuloCursos() {
             }
         }
     });
-
     if (formModulo) {
         formModulo.addEventListener("submit", async e => {
             e.preventDefault();
             const titulo = $("c_mod_titulo").value.trim();
             const orden = Number($("c_mod_orden").value) || 1;
             if (!titulo) return;
-
             try {
                 const nuevoId = "MOD-" + Date.now();
                 await setDoc(doc(db, "cursos", nuevoId), {
@@ -1521,7 +1560,6 @@ function iniciarModuloCursos() {
             }
         });
     }
-
     if (formSubtitulo) {
         formSubtitulo.addEventListener("submit", async e => {
             e.preventDefault();
@@ -1529,7 +1567,6 @@ function iniciarModuloCursos() {
             const titulo = $("c_sub_titulo").value.trim();
             const contenido = $("c_sub_contenido").value.trim();
             if (!modId || !titulo || !contenido) return;
-
             try {
                 await updateDoc(doc(db, "cursos", modId), {
                     subtitulos: arrayUnion({
