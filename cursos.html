@@ -11,7 +11,6 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-
 <section id="lg" class="login-screen hidden">
     <div class="login-card">
         <div class="brand brand-dark">
@@ -23,7 +22,6 @@
         <a href="index.html" class="btn btn-primary btn-full">Ir al inicio de sesión</a>
     </div>
 </section>
-
 <div id="ap" class="hidden">
     <header class="top">
         <div class="container">
@@ -54,14 +52,12 @@
             </div>
         </div>
     </header>
-
     <main class="container main-content">
         <div style="margin-bottom: 20px; display: flex; justify-content: flex-end;">
             <button type="button" class="btn btn-primary" id="btnToggleCreadorCurso">
                 ＋ Crear nuevo módulo o tema
             </button>
         </div>
-
         <section id="panelCreadorCurso" class="card hidden">
             <div class="section-heading">
                 <div>
@@ -69,7 +65,6 @@
                     <h2>Agregar Módulo o Subtítulo</h2>
                 </div>
             </div>
-
             <div class="form-grid">
                 <form id="formCrearModulo" style="background: #f8fafc; padding: 18px; border-radius: 12px; border: 1px solid var(--line);">
                     <h4>1. Crear Módulo Principal</h4>
@@ -83,7 +78,6 @@
                     </div>
                     <button type="submit" class="btn btn-secondary btn-full">Guardar Módulo</button>
                 </form>
-
                 <form id="formCrearSubtitulo" style="background: #f8fafc; padding: 18px; border-radius: 12px; border: 1px solid var(--line);">
                     <h4>2. Agregar Subtítulo / Lección</h4>
                     <div class="field">
@@ -97,13 +91,71 @@
                         <input id="c_sub_titulo" placeholder="Ej: 1.0. Introducción" required>
                     </div>
                     <div class="field">
-                        <label for="c_sub_contenido">Información completa *</label>
-                        <textarea id="c_sub_contenido" rows="4" placeholder="Escribe toda la explicación, pasos, enlaces o notas..." required></textarea>
+                        <label for="c_sub_contenido">Información completa (en prosa) *</label>
+                        <textarea id="c_sub_contenido" rows="5" placeholder="Escribe la explicación en párrafos. Deja una línea en blanco para separar párrafos..." required></textarea>
                     </div>
-                    <button type="submit" class="btn btn-primary btn-full">Agregar Subtítulo</button>
+                    <div class="field">
+                        <label for="c_sub_fotos">Fotografías del tema (opcional)</label>
+                        <input id="c_sub_fotos" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+                        <div id="c_sub_preview" class="curso-fotos-preview"></div>
+                        <small id="c_sub_estado_fotos" class="muted"></small>
+                    </div>
+                    <button type="submit" id="btnGuardarSubtitulo" class="btn btn-primary btn-full">Agregar Subtítulo</button>
                 </form>
             </div>
             <div id="msgCurso" aria-live="polite"></div>
+        </section>
+
+        <section id="panelEditorCurso" class="card hidden" style="border-top: 4px solid var(--blue);">
+            <div class="section-heading">
+                <div>
+                    <span class="section-kicker">EDICIÓN</span>
+                    <h2 id="tituloEditorCurso">Editar contenido</h2>
+                </div>
+                <button type="button" class="btn btn-neutral" id="btnCerrarEditorCurso">✖ Cerrar</button>
+            </div>
+
+            <form id="formEditarModulo" class="hidden">
+                <input type="hidden" id="edit_mod_id">
+                <div class="form-grid">
+                    <div class="field">
+                        <label for="edit_mod_titulo">Título del módulo *</label>
+                        <input id="edit_mod_titulo" required>
+                    </div>
+                    <div class="field">
+                        <label for="edit_mod_orden">Número de orden *</label>
+                        <input id="edit_mod_orden" type="number" min="1" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Guardar cambios del módulo</button>
+            </form>
+
+            <form id="formEditarSubtitulo" class="hidden">
+                <input type="hidden" id="edit_sub_mod_id">
+                <input type="hidden" id="edit_sub_idx">
+                <div class="field">
+                    <label for="edit_sub_titulo">Subtítulo *</label>
+                    <input id="edit_sub_titulo" required>
+                </div>
+                <div class="field">
+                    <label for="edit_sub_contenido">Contenido en prosa *</label>
+                    <textarea id="edit_sub_contenido" rows="6" required></textarea>
+                </div>
+                <div class="field">
+                    <label>Fotos actuales del tema</label>
+                    <div id="edit_sub_fotos_actuales" class="curso-galeria"></div>
+                </div>
+                <div class="field">
+                    <label for="edit_sub_nuevas_fotos">Agregar nuevas fotografías</label>
+                    <input id="edit_sub_nuevas_fotos" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+                    <div id="edit_sub_preview" class="curso-fotos-preview"></div>
+                    <small id="edit_sub_estado_fotos" class="muted"></small>
+                </div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <button type="submit" id="btnGuardarEdicionSub" class="btn btn-primary">Guardar cambios del tema</button>
+                    <button type="button" class="btn btn-neutral" id="btnCancelarEdicionSub">Cancelar</button>
+                </div>
+            </form>
         </section>
 
         <section id="contenedorModulosCurso" class="curso-lista-modulos">
@@ -111,15 +163,12 @@
                 <p class="muted">Cargando módulos del curso...</p>
             </div>
         </section>
-
         <footer class="footer">
             <span>JS TECH</span>
             <span>Plataforma interna de capacitación técnica</span>
         </footer>
     </main>
 </div>
-
 <script type="module" src="app.js"></script>
 </body>
-
-</html>S
+</html>
