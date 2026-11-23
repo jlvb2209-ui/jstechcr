@@ -1521,8 +1521,7 @@ function iniciarModuloCursos() {
         if (!limpio) return "";
         const parrafos = limpio
             .split(/\n\s*\n/)
-            .flatMap(bloque => bloque.split(/\n/))
-            .map(p => p.trim())
+            .map(bloque => bloque.replace(/\n+/g, " ").replace(/\s{2,}/g, " ").trim())
             .filter(Boolean);
         return parrafos.map(p => `<p class="curso-parrafo">${escapar(p)}</p>`).join("");
     }
