@@ -1486,28 +1486,41 @@ input[type="file"]::file-selector-button {
 }
 
 .curso-subtitulo-contenido {
+    display: block;
     padding: 20px 28px 24px 62px;
     background: #ffffff;
     border-top: 1px dashed var(--line);
     color: var(--ink-soft);
     font-size: .98rem;
     line-height: 1.8;
+    width: 100%;
+    max-width: 100%;
     min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
     overflow: hidden;
 }
 
 .curso-prosa {
+    display: block;
     width: 100%;
     max-width: 100%;
     min-width: 0;
+    white-space: normal;
     overflow-wrap: anywhere;
     word-break: break-word;
 }
 
 .curso-parrafo {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     margin: 0 0 14px;
     line-height: 1.8;
     text-align: left;
+    white-space: normal;
     overflow-wrap: anywhere;
     word-break: break-word;
 }
@@ -1519,7 +1532,7 @@ input[type="file"]::file-selector-button {
 .curso-galeria,
 .curso-fotos-preview {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
     gap: 12px;
     margin-top: 16px;
 }
@@ -1533,6 +1546,7 @@ input[type="file"]::file-selector-button {
     background: #f8fafc;
     border: 1px solid var(--line);
     border-radius: 10px;
+    min-width: 0;
 }
 
 .curso-foto-card img,
@@ -1542,6 +1556,21 @@ input[type="file"]::file-selector-button {
     object-fit: cover;
     border-radius: 8px;
     display: block;
+}
+
+.curso-foto-desc {
+    margin: 2px 0 0;
+    font-size: .82rem;
+    line-height: 1.45;
+    color: var(--ink-soft);
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.curso-foto-desc-input {
+    padding: 7px 9px;
+    font-size: .78rem;
+    border-radius: 7px;
 }
 
 .curso-preview-item span {
