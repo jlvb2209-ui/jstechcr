@@ -55,7 +55,6 @@ const db = initializeFirestore(app, {
     experimentalForceLongPolling: true
 });
 const auth = getAuth(app);
-
 const $ = id => document.getElementById(id);
 
 let unsubscribe = null;
@@ -637,7 +636,6 @@ async function abrirDetalle(id, silencioso = false) {
         console.warn("No se pudo cargar el contacto:", error);
     }
     if (miVersion !== versionDetalle) return;
-
     const historial = Array.isArray(registro.historial)
         ? registro.historial
         : [];
@@ -648,7 +646,6 @@ async function abrirDetalle(id, silencioso = false) {
     const detalleMarcaModelo = [registro.marca, registro.modelo]
         .filter(Boolean)
         .join(" ") || "No especificada";
-
     dt.innerHTML = `
         <article class="card detail-card">
             <div class="detail-heading">
@@ -789,7 +786,6 @@ async function abrirDetalle(id, silencioso = false) {
             </form>
         </article>
     `;
-
     $("btnImprimirDetalle")?.addEventListener("click", () => {
         imprimirTicket(
             registro.id,
@@ -803,16 +799,13 @@ async function abrirDetalle(id, silencioso = false) {
     });
     $("btnCopiarCodigo")?.addEventListener("click", () => copiarTexto(registro.id));
     $("btnCopiarEnlace")?.addEventListener("click", () => copiarTexto(enlaceCliente(registro.id)));
-
     configurarFotosGoogleDrive(registro.id, registro.fotos || []);
-
     const selectNuevoEstado = $("nuevoEstado");
     const bloqueProcedimiento = $("bloqueProcedimiento");
     const selectProcedimiento = $("procedimientoEstado");
     const inputNuevoProcedimiento = $("nuevoProcedimiento");
     const btnAgregarProcedimiento = $("btnAgregarProcedimiento");
     const btnQuitarProcedimiento = $("btnQuitarProcedimiento");
-
     function renderizarOpcionesProcedimiento(seleccionDeseada = "") {
         if (!selectProcedimiento) return;
         const personalizados = obtenerProcedimientosPersonalizados();
@@ -820,7 +813,6 @@ async function abrirDetalle(id, silencioso = false) {
         const placeholder = personalizados.length
             ? "Selecciona un procedimiento..."
             : "Agrega un procedimiento con + Agregar...";
-
         selectProcedimiento.innerHTML = `
             <option value="">${escapar(placeholder)}</option>
             ${personalizados.map(p => `
@@ -830,9 +822,7 @@ async function abrirDetalle(id, silencioso = false) {
             `).join("")}
         `;
     }
-
     renderizarOpcionesProcedimiento(registro.procedimiento || "");
-
     btnAgregarProcedimiento?.addEventListener("click", () => {
         const nuevo = (inputNuevoProcedimiento?.value || "").trim();
         if (!nuevo) {
@@ -852,7 +842,6 @@ async function abrirDetalle(id, silencioso = false) {
             inputNuevoProcedimiento.focus();
         }
     });
-
     btnQuitarProcedimiento?.addEventListener("click", () => {
         const seleccionado = (selectProcedimiento?.value || "").trim();
         if (!seleccionado) {
@@ -868,7 +857,6 @@ async function abrirDetalle(id, silencioso = false) {
         guardarProcedimientosPersonalizados(lista);
         renderizarOpcionesProcedimiento("");
     });
-
     function actualizarVisibilidadProcedimiento() {
         if (!selectNuevoEstado || !bloqueProcedimiento) return;
         const esReparacion = selectNuevoEstado.value === "En reparación";
@@ -877,10 +865,8 @@ async function abrirDetalle(id, silencioso = false) {
             selectProcedimiento.value = "";
         }
     }
-
     selectNuevoEstado?.addEventListener("change", actualizarVisibilidadProcedimiento);
     actualizarVisibilidadProcedimiento();
-
     $("formActualizarEstado")?.addEventListener("submit", async ev => {
         ev.preventDefault();
         const nuevoEstado = $("nuevoEstado").value;
@@ -937,13 +923,11 @@ function configurarFotosGoogleDrive(codigo, fotosIniciales = []) {
     }
     let seleccionadas = [];
     let urlsTemporales = [];
-
     function limpiarPrevisualizaciones() {
         urlsTemporales.forEach(url => URL.revokeObjectURL(url));
         urlsTemporales = [];
         vista.innerHTML = "";
     }
-
     function dibujarPrevisualizaciones() {
         limpiarPrevisualizaciones();
         seleccionadas.forEach((archivo, indice) => {
@@ -970,7 +954,6 @@ function configurarFotosGoogleDrive(codigo, fotosIniciales = []) {
             vista.appendChild(tarjeta);
         });
     }
-
     function agregarArchivos(archivos) {
         const permitidos = ["image/jpeg", "image/png", "image/webp"];
         let rechazados = 0;
@@ -986,7 +969,6 @@ function configurarFotosGoogleDrive(codigo, fotosIniciales = []) {
             ? `Se omitieron ${rechazados} archivo(s). Usa JPG, PNG o WEBP de máximo 10MB.`
             : `Imágenes seleccionadas: ${seleccionadas.length}`;
     }
-
     function dibujarGaleria(fotos) {
         const lista = Array.isArray(fotos) ? fotos : [];
         if (!lista.length) {
@@ -1015,7 +997,6 @@ function configurarFotosGoogleDrive(codigo, fotosIniciales = []) {
             `;
         }).join("");
     }
-
     abrir.addEventListener("click", () => {
         const cerrado = apartado.style.display === "none";
         apartado.style.display = cerrado ? "block" : "none";
@@ -1029,9 +1010,7 @@ function configurarFotosGoogleDrive(codigo, fotosIniciales = []) {
         agregarArchivos(Array.from(galeria.files || []));
         galeria.value = "";
     });
-
     dibujarGaleria(fotosIniciales);
-
     guardar.addEventListener("click", async () => {
         if (!seleccionadas.length) {
             mensaje.textContent = "Primero selecciona al menos una fotografía.";
@@ -1091,7 +1070,6 @@ function configurarFotosGoogleDrive(codigo, fotosIniciales = []) {
             guardar.textContent = "Subir fotografías a Google Drive";
         }
     });
-
     galeriaGuardada.addEventListener("click", async evento => {
         const boton = evento.target.closest("[data-eliminar-foto]");
         if (!boton) return;
@@ -1506,12 +1484,227 @@ function iniciarModuloCursos() {
     const contenedorModulos = $("contenedorModulosCurso");
     if (!contenedorModulos || cursosInicializado) return;
     cursosInicializado = true;
+
     const btnToggleCreador = $("btnToggleCreadorCurso");
     const panelCreador = $("panelCreadorCurso");
     const formModulo = $("formCrearModulo");
     const formSubtitulo = $("formCrearSubtitulo");
     const selectModulos = $("c_sub_modulo");
+
+    const inputFotosNuevo = $("c_sub_fotos");
+    const previewFotosNuevo = $("c_sub_preview");
+    const estadoFotosNuevo = $("c_sub_estado_fotos");
+    const btnGuardarSubtitulo = $("btnGuardarSubtitulo");
+
+    const panelEditor = $("panelEditorCurso");
+    const tituloEditor = $("tituloEditorCurso");
+    const btnCerrarEditor = $("btnCerrarEditorCurso");
+    const formEditarModulo = $("formEditarModulo");
+    const formEditarSubtitulo = $("formEditarSubtitulo");
+    const btnCancelarEdicionSub = $("btnCancelarEdicionSub");
+    const btnGuardarEdicionSub = $("btnGuardarEdicionSub");
+
+    const editSubFotosActuales = $("edit_sub_fotos_actuales");
+    const editSubNuevasFotos = $("edit_sub_nuevas_fotos");
+    const editSubPreview = $("edit_sub_preview");
+    const editSubEstadoFotos = $("edit_sub_estado_fotos");
+
     let listaModulos = [];
+    let archivosNuevoSub = [];
+    let archivosEditSub = [];
+    let fotosEditActuales = [];
+    let modulosAbiertos = new Set();
+    let temasAbiertos = new Set();
+
+    function formatearTextoEnProsa(texto) {
+        const limpio = String(texto ?? "").replace(/\r\n/g, "\n").trim();
+        if (!limpio) return "";
+        const parrafos = limpio
+            .split(/\n\s*\n/)
+            .flatMap(bloque => bloque.split(/\n/))
+            .map(p => p.trim())
+            .filter(Boolean);
+        return parrafos.map(p => `<p class="curso-parrafo">${escapar(p)}</p>`).join("");
+    }
+
+    async function subirArchivosCursoAGoogleDrive(archivos, prefijo = "CURSO", estadoEl = null) {
+        const permitidos = ["image/jpeg", "image/png", "image/webp"];
+        const subidas = [];
+        for (let i = 0; i < archivos.length; i++) {
+            const archivo = archivos[i];
+            if (!permitidos.includes(archivo.type) || archivo.size > 10 * 1024 * 1024) {
+                throw new Error(`"${archivo.name}" no es válido (usa JPG, PNG o WEBP de máx. 10MB).`);
+            }
+            if (estadoEl) {
+                estadoEl.textContent = `Subiendo foto ${i + 1} de ${archivos.length} a Google Drive...`;
+            }
+            const base64 = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = err => reject(err);
+                reader.readAsDataURL(archivo);
+            });
+            const respuesta = await fetch(URL_GOOGLE_DRIVE, {
+                method: "POST",
+                body: JSON.stringify({
+                    file: base64,
+                    filename: `${prefijo}_${Date.now()}_${archivo.name}`
+                })
+            });
+            const resultado = await respuesta.json();
+            if (resultado.status === "success" && resultado.url) {
+                subidas.push({
+                    url: resultado.url,
+                    nombre: archivo.name
+                });
+            } else {
+                throw new Error(resultado.message || "Error al subir imagen a Google Drive.");
+            }
+        }
+        return subidas;
+    }
+
+    function renderPreviewArchivos(archivos, contenedor, onQuitar) {
+        if (!contenedor) return;
+        contenedor.innerHTML = "";
+        archivos.forEach((archivo, idx) => {
+            const url = URL.createObjectURL(archivo);
+            const item = document.createElement("div");
+            item.className = "curso-preview-item";
+            item.innerHTML = `
+                <img src="${escapar(url)}" alt="${escapar(archivo.name)}">
+                <span>${escapar(archivo.name)}</span>
+                <button type="button" class="curso-btn-mini-del">Quitar</button>
+            `;
+            item.querySelector("button").addEventListener("click", () => {
+                URL.revokeObjectURL(url);
+                onQuitar(idx);
+            });
+            contenedor.appendChild(item);
+        });
+    }
+
+    if (inputFotosNuevo) {
+        inputFotosNuevo.addEventListener("change", function onChangeNuevo() {
+            const agregados = Array.from(inputFotosNuevo.files || []);
+            archivosNuevoSub = [...archivosNuevoSub, ...agregados];
+            inputFotosNuevo.value = "";
+            const quitarHandler = idx => {
+                archivosNuevoSub.splice(idx, 1);
+                renderPreviewArchivos(archivosNuevoSub, previewFotosNuevo, quitarHandler);
+                if (estadoFotosNuevo) {
+                    estadoFotosNuevo.textContent = archivosNuevoSub.length
+                        ? `${archivosNuevoSub.length} foto(s) lista(s) para subir.`
+                        : "";
+                }
+            };
+            renderPreviewArchivos(archivosNuevoSub, previewFotosNuevo, quitarHandler);
+            if (estadoFotosNuevo) {
+                estadoFotosNuevo.textContent = archivosNuevoSub.length
+                    ? `${archivosNuevoSub.length} foto(s) lista(s) para subir.`
+                    : "";
+            }
+        });
+    }
+
+    function renderFotosEditActuales() {
+        if (!editSubFotosActuales) return;
+        if (!fotosEditActuales.length) {
+            editSubFotosActuales.innerHTML = `<p class="muted">Este tema no tiene fotografías guardadas.</p>`;
+            return;
+        }
+        editSubFotosActuales.innerHTML = fotosEditActuales.map((foto, i) => `
+            <div class="curso-foto-card">
+                <a href="${escapar(foto.url)}" target="_blank" rel="noopener noreferrer">
+                    <img src="${escapar(foto.url)}" alt="${escapar(foto.nombre || "Foto del tema")}" loading="lazy">
+                </a>
+                <button type="button" class="curso-btn-mini-del btn-quitar-foto-edit" data-fidx="${i}" style="margin-top:6px;width:100%;">
+                    🗑 Quitar foto
+                </button>
+            </div>
+        `).join("");
+    }
+
+    if (editSubFotosActuales) {
+        editSubFotosActuales.addEventListener("click", e => {
+            const btn = e.target.closest(".btn-quitar-foto-edit");
+            if (!btn) return;
+            const fidx = Number(btn.dataset.fidx);
+            fotosEditActuales = fotosEditActuales.filter((_, i) => i !== fidx);
+            renderFotosEditActuales();
+        });
+    }
+
+    if (editSubNuevasFotos) {
+        editSubNuevasFotos.addEventListener("change", () => {
+            const agregados = Array.from(editSubNuevasFotos.files || []);
+            archivosEditSub = [...archivosEditSub, ...agregados];
+            editSubNuevasFotos.value = "";
+            const quitarEditHandler = idx => {
+                archivosEditSub.splice(idx, 1);
+                renderPreviewArchivos(archivosEditSub, editSubPreview, quitarEditHandler);
+                if (editSubEstadoFotos) {
+                    editSubEstadoFotos.textContent = archivosEditSub.length
+                        ? `${archivosEditSub.length} foto(s) nueva(s) por subir.`
+                        : "";
+                }
+            };
+            renderPreviewArchivos(archivosEditSub, editSubPreview, quitarEditHandler);
+            if (editSubEstadoFotos) {
+                editSubEstadoFotos.textContent = archivosEditSub.length
+                    ? `${archivosEditSub.length} foto(s) nueva(s) por subir.`
+                    : "";
+            }
+        });
+    }
+
+    function cerrarEditorCurso() {
+        if (!panelEditor) return;
+        panelEditor.classList.add("hidden");
+        formEditarModulo?.classList.add("hidden");
+        formEditarSubtitulo?.classList.add("hidden");
+        archivosEditSub = [];
+        fotosEditActuales = [];
+        if (editSubPreview) editSubPreview.innerHTML = "";
+        if (editSubEstadoFotos) editSubEstadoFotos.textContent = "";
+    }
+
+    btnCerrarEditor?.addEventListener("click", cerrarEditorCurso);
+    btnCancelarEdicionSub?.addEventListener("click", cerrarEditorCurso);
+
+    function abrirEditorModulo(modId) {
+        const mod = listaModulos.find(m => m.id === modId);
+        if (!mod || !panelEditor || !formEditarModulo) return;
+        panelEditor.classList.remove("hidden");
+        formEditarSubtitulo?.classList.add("hidden");
+        formEditarModulo.classList.remove("hidden");
+        tituloEditor.textContent = `Editar módulo: ${mod.titulo}`;
+        $("edit_mod_id").value = mod.id;
+        $("edit_mod_titulo").value = mod.titulo || "";
+        $("edit_mod_orden").value = mod.orden || 1;
+        panelEditor.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function abrirEditorSubtitulo(modId, idx) {
+        const mod = listaModulos.find(m => m.id === modId);
+        const sub = mod?.subtitulos?.[idx];
+        if (!mod || !sub || !panelEditor || !formEditarSubtitulo) return;
+        panelEditor.classList.remove("hidden");
+        formEditarModulo?.classList.add("hidden");
+        formEditarSubtitulo.classList.remove("hidden");
+        tituloEditor.textContent = `Editar tema: ${sub.titulo}`;
+        $("edit_sub_mod_id").value = modId;
+        $("edit_sub_idx").value = String(idx);
+        $("edit_sub_titulo").value = sub.titulo || "";
+        $("edit_sub_contenido").value = sub.contenido || "";
+        fotosEditActuales = Array.isArray(sub.fotos) ? [...sub.fotos] : [];
+        archivosEditSub = [];
+        if (editSubPreview) editSubPreview.innerHTML = "";
+        if (editSubEstadoFotos) editSubEstadoFotos.textContent = "";
+        renderFotosEditActuales();
+        panelEditor.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
     if (btnToggleCreador && panelCreador) {
         btnToggleCreador.addEventListener("click", () => {
             panelCreador.classList.toggle("hidden");
@@ -1521,6 +1714,7 @@ function iniciarModuloCursos() {
                 : "＋ Crear nuevo módulo o tema";
         });
     }
+
     const qCursos = query(collection(db, "cursos"), orderBy("orden", "asc"));
     onSnapshot(qCursos, snapshot => {
         listaModulos = snapshot.docs.map(d => ({
@@ -1533,6 +1727,7 @@ function iniciarModuloCursos() {
         console.error("Error cargando cursos:", error);
         contenedorModulos.innerHTML = `<div class="message error">No se pudieron cargar los módulos: ${escapar(error.message)}</div>`;
     });
+
     function actualizarSelectorModulos() {
         if (!selectModulos) return;
         const valorAnterior = selectModulos.value;
@@ -1547,6 +1742,7 @@ function iniciarModuloCursos() {
             selectModulos.value = valorAnterior;
         }
     }
+
     function renderizarModulosCurso() {
         if (!listaModulos.length) {
             contenedorModulos.innerHTML = `
@@ -1558,65 +1754,118 @@ function iniciarModuloCursos() {
         }
         contenedorModulos.innerHTML = listaModulos.map(mod => {
             const subtitulos = Array.isArray(mod.subtitulos) ? mod.subtitulos : [];
+            const modAbierto = modulosAbiertos.has(mod.id);
             return `
-                <div class="curso-modulo-card" data-modulo-id="${escapar(mod.id)}">
-                    <button type="button" class="curso-modulo-header">
-                        <div class="curso-modulo-izq">
-                            <div class="curso-modulo-icono-lista">☰</div>
-                            <h3 class="curso-modulo-titulo">${escapar(mod.titulo)}</h3>
+                <div class="curso-modulo-card ${modAbierto ? "abierto" : ""}" data-modulo-id="${escapar(mod.id)}">
+                    <div class="curso-modulo-top-bar">
+                        <button type="button" class="curso-modulo-header">
+                            <div class="curso-modulo-izq">
+                                <div class="curso-modulo-icono-lista">☰</div>
+                                <h3 class="curso-modulo-titulo">${escapar(mod.titulo)}</h3>
+                            </div>
+                            <div class="curso-modulo-flecha">▼</div>
+                        </button>
+                        <div class="curso-modulo-acciones-top">
+                            <button type="button" class="curso-btn-mini-edit btn-editar-mod" data-mod="${escapar(mod.id)}">
+                                ✏️ Editar módulo
+                            </button>
+                            <button type="button" class="curso-btn-mini-del btn-borrar-mod" data-mod="${escapar(mod.id)}">
+                                🗑 Eliminar
+                            </button>
                         </div>
-                        <div class="curso-modulo-flecha">▼</div>
-                    </button>
-                    <div class="curso-subtitulos-lista hidden">
-                        ${subtitulos.length ? subtitulos.map((sub, idx) => `
-                            <div class="curso-subtitulo-item">
-                                <button type="button" class="curso-subtitulo-btn">
-                                    <div class="curso-subtitulo-izq">
-                                        <span class="curso-subtitulo-circulo">›</span>
-                                        <span>${escapar(sub.titulo)}</span>
-                                    </div>
-                                </button>
-                                <div class="curso-subtitulo-contenido hidden">
-                                    <div>${escapar(sub.contenido)}</div>
-                                    <div class="curso-acciones-admin">
-                                        <button type="button" class="curso-btn-mini-del btn-borrar-sub" data-mod="${escapar(mod.id)}" data-idx="${idx}">
-                                            🗑 Eliminar tema
-                                        </button>
+                    </div>
+                    <div class="curso-subtitulos-lista ${modAbierto ? "" : "hidden"}">
+                        ${subtitulos.length ? subtitulos.map((sub, idx) => {
+                            const claveTema = `${mod.id}__${idx}`;
+                            const temaAbierto = temasAbiertos.has(claveTema);
+                            const fotosTema = Array.isArray(sub.fotos) ? sub.fotos : [];
+                            return `
+                                <div class="curso-subtitulo-item ${temaAbierto ? "activo" : ""}">
+                                    <button type="button" class="curso-subtitulo-btn">
+                                        <div class="curso-subtitulo-izq">
+                                            <span class="curso-subtitulo-circulo">›</span>
+                                            <span>${escapar(sub.titulo)}</span>
+                                        </div>
+                                    </button>
+                                    <div class="curso-subtitulo-contenido ${temaAbierto ? "" : "hidden"}">
+                                        <div class="curso-prosa">${formatearTextoEnProsa(sub.contenido)}</div>
+                                        ${fotosTema.length ? `
+                                            <div class="curso-galeria">
+                                                ${fotosTema.map(f => `
+                                                    <a href="${escapar(f.url)}" target="_blank" rel="noopener noreferrer" class="curso-foto-card">
+                                                        <img src="${escapar(f.url)}" alt="${escapar(f.nombre || sub.titulo)}" loading="lazy">
+                                                    </a>
+                                                `).join("")}
+                                            </div>
+                                        ` : ""}
+                                        <div class="curso-acciones-admin">
+                                            <button type="button" class="curso-btn-mini-edit btn-editar-sub" data-mod="${escapar(mod.id)}" data-idx="${idx}">
+                                                ✏️ Editar tema
+                                            </button>
+                                            <button type="button" class="curso-btn-mini-del btn-borrar-sub" data-mod="${escapar(mod.id)}" data-idx="${idx}">
+                                                🗑 Eliminar tema
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        `).join("") : `
+                            `;
+                        }).join("") : `
                             <div style="padding: 16px 24px;" class="muted">
                                 Este módulo aún no tiene subtítulos agregados.
                             </div>
                         `}
-                        <div style="padding: 10px 24px; background: #f1f5f9; display: flex; justify-content: flex-end;">
-                            <button type="button" class="curso-btn-mini-del btn-borrar-mod" data-mod="${escapar(mod.id)}">
-                                🗑 Eliminar módulo completo
-                            </button>
-                        </div>
                     </div>
                 </div>
             `;
         }).join("");
     }
+
     contenedorModulos.addEventListener("click", async e => {
+        const btnEditarMod = e.target.closest(".btn-editar-mod");
+        if (btnEditarMod) {
+            abrirEditorModulo(btnEditarMod.dataset.mod);
+            return;
+        }
+
+        const btnEditarSub = e.target.closest(".btn-editar-sub");
+        if (btnEditarSub) {
+            abrirEditorSubtitulo(btnEditarSub.dataset.mod, Number(btnEditarSub.dataset.idx));
+            return;
+        }
+
         const headerModulo = e.target.closest(".curso-modulo-header");
         if (headerModulo) {
             const tarjeta = headerModulo.closest(".curso-modulo-card");
+            const modId = tarjeta.dataset.moduloId;
             const listaSub = tarjeta.querySelector(".curso-subtitulos-lista");
             tarjeta.classList.toggle("abierto");
             listaSub.classList.toggle("hidden");
+            if (tarjeta.classList.contains("abierto")) {
+                modulosAbiertos.add(modId);
+            } else {
+                modulosAbiertos.delete(modId);
+            }
             return;
         }
+
         const btnSub = e.target.closest(".curso-subtitulo-btn");
         if (btnSub) {
+            const tarjeta = btnSub.closest(".curso-modulo-card");
             const itemSub = btnSub.closest(".curso-subtitulo-item");
             const contenido = itemSub.querySelector(".curso-subtitulo-contenido");
+            const modId = tarjeta?.dataset.moduloId || "";
+            const idxBtn = Array.from(tarjeta.querySelectorAll(".curso-subtitulo-item")).indexOf(itemSub);
+            const clave = `${modId}__${idxBtn}`;
             itemSub.classList.toggle("activo");
             contenido.classList.toggle("hidden");
+            if (itemSub.classList.contains("activo")) {
+                temasAbiertos.add(clave);
+            } else {
+                temasAbiertos.delete(clave);
+            }
             return;
         }
+
         const btnBorrarSub = e.target.closest(".btn-borrar-sub");
         if (btnBorrarSub) {
             const modId = btnBorrarSub.dataset.mod;
@@ -1632,17 +1881,20 @@ function iniciarModuloCursos() {
             }
             return;
         }
+
         const btnBorrarMod = e.target.closest(".btn-borrar-mod");
         if (btnBorrarMod) {
             const modId = btnBorrarMod.dataset.mod;
             if (!confirm("¿Seguro que deseas eliminar todo este módulo y sus temas?")) return;
             try {
                 await deleteDoc(doc(db, "cursos", modId));
+                modulosAbiertos.delete(modId);
             } catch (err) {
                 alert("Error al eliminar módulo: " + err.message);
             }
         }
     });
+
     if (formModulo) {
         formModulo.addEventListener("submit", async e => {
             e.preventDefault();
@@ -1657,6 +1909,7 @@ function iniciarModuloCursos() {
                     subtitulos: [],
                     creado: Date.now()
                 });
+                modulosAbiertos.add(nuevoId);
                 formModulo.reset();
                 $("c_mod_orden").value = listaModulos.length + 2;
                 mostrarMensaje("msgCurso", "Módulo creado correctamente.", "success");
@@ -1665,6 +1918,7 @@ function iniciarModuloCursos() {
             }
         });
     }
+
     if (formSubtitulo) {
         formSubtitulo.addEventListener("submit", async e => {
             e.preventDefault();
@@ -1672,19 +1926,95 @@ function iniciarModuloCursos() {
             const titulo = $("c_sub_titulo").value.trim();
             const contenido = $("c_sub_contenido").value.trim();
             if (!modId || !titulo || !contenido) return;
+
+            establecerCarga(btnGuardarSubtitulo, true, "Agregar Subtítulo");
             try {
+                const fotosSubidas = archivosNuevoSub.length
+                    ? await subirArchivosCursoAGoogleDrive(archivosNuevoSub, modId, estadoFotosNuevo)
+                    : [];
+
                 await updateDoc(doc(db, "cursos", modId), {
                     subtitulos: arrayUnion({
                         titulo,
                         contenido,
+                        fotos: fotosSubidas,
                         creado: Date.now()
                     })
                 });
+                modulosAbiertos.add(modId);
                 formSubtitulo.reset();
                 selectModulos.value = modId;
+                archivosNuevoSub = [];
+                if (previewFotosNuevo) previewFotosNuevo.innerHTML = "";
+                if (estadoFotosNuevo) estadoFotosNuevo.textContent = "";
                 mostrarMensaje("msgCurso", "Subtítulo agregado al módulo.", "success");
             } catch (err) {
                 mostrarMensaje("msgCurso", "Error al agregar subtítulo: " + err.message, "error");
+                if (estadoFotosNuevo) estadoFotosNuevo.textContent = "";
+            } finally {
+                establecerCarga(btnGuardarSubtitulo, false, "Agregar Subtítulo");
+            }
+        });
+    }
+
+    if (formEditarModulo) {
+        formEditarModulo.addEventListener("submit", async e => {
+            e.preventDefault();
+            const modId = $("edit_mod_id").value;
+            const titulo = $("edit_mod_titulo").value.trim();
+            const orden = Number($("edit_mod_orden").value) || 1;
+            if (!modId || !titulo) return;
+            try {
+                await updateDoc(doc(db, "cursos", modId), {
+                    titulo,
+                    orden,
+                    actualizado: Date.now()
+                });
+                cerrarEditorCurso();
+                mostrarMensaje("msgCurso", "Módulo actualizado correctamente.", "success");
+            } catch (err) {
+                alert("Error al actualizar módulo: " + err.message);
+            }
+        });
+    }
+
+    if (formEditarSubtitulo) {
+        formEditarSubtitulo.addEventListener("submit", async e => {
+            e.preventDefault();
+            const modId = $("edit_sub_mod_id").value;
+            const idx = Number($("edit_sub_idx").value);
+            const titulo = $("edit_sub_titulo").value.trim();
+            const contenido = $("edit_sub_contenido").value.trim();
+            const modActual = listaModulos.find(m => m.id === modId);
+            if (!modActual || !Array.isArray(modActual.subtitulos) || !modActual.subtitulos[idx]) return;
+            if (!titulo || !contenido) return;
+
+            establecerCarga(btnGuardarEdicionSub, true, "Guardar cambios del tema");
+            try {
+                const nuevasSubidas = archivosEditSub.length
+                    ? await subirArchivosCursoAGoogleDrive(archivosEditSub, modId, editSubEstadoFotos)
+                    : [];
+
+                const subOriginal = modActual.subtitulos[idx];
+                const actualizados = [...modActual.subtitulos];
+                actualizados[idx] = {
+                    ...subOriginal,
+                    titulo,
+                    contenido,
+                    fotos: [...fotosEditActuales, ...nuevasSubidas],
+                    actualizado: Date.now()
+                };
+
+                await updateDoc(doc(db, "cursos", modId), {
+                    subtitulos: actualizados
+                });
+                cerrarEditorCurso();
+                mostrarMensaje("msgCurso", "Tema actualizado correctamente.", "success");
+            } catch (err) {
+                alert("Error al guardar cambios del tema: " + err.message);
+                if (editSubEstadoFotos) editSubEstadoFotos.textContent = "";
+            } finally {
+                establecerCarga(btnGuardarEdicionSub, false, "Guardar cambios del tema");
             }
         });
     }
