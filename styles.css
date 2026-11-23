@@ -1558,6 +1558,16 @@ input[type="file"]::file-selector-button {
     display: block;
 }
 
+.curso-foto-ampliable {
+    cursor: zoom-in;
+    transition: transform .18s ease, opacity .18s ease;
+}
+
+.curso-foto-ampliable:hover {
+    transform: scale(1.02);
+    opacity: .95;
+}
+
 .curso-foto-desc {
     margin: 2px 0 0;
     font-size: .82rem;
@@ -1614,6 +1624,77 @@ input[type="file"]::file-selector-button {
 
 .curso-btn-mini-del:hover {
     background: #fbd9d5;
+}
+
+.curso-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(8, 20, 28, .88);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.curso-lightbox-contenido {
+    position: relative;
+    max-width: 92vw;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.curso-lightbox-contenido img {
+    max-width: 92vw;
+    max-height: 78vh;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 12px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, .55);
+    background: #0f1f2e;
+}
+
+.curso-lightbox-desc {
+    max-width: 720px;
+    color: #f8fafc;
+    background: rgba(15, 31, 46, .78);
+    border: 1px solid rgba(255, 255, 255, .16);
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: .92rem;
+    line-height: 1.5;
+    text-align: center;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.curso-lightbox-cerrar {
+    position: fixed;
+    top: 16px;
+    right: 20px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, .28);
+    background: rgba(15, 31, 46, .8);
+    color: #ffffff;
+    font-size: 26px;
+    line-height: 1;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    z-index: 10000;
+}
+
+.curso-lightbox-cerrar:hover {
+    background: #b42318;
+    border-color: #b42318;
 }
 
 @media (max-width: 720px) {
