@@ -1526,16 +1526,18 @@ function iniciarModuloCursos() {
         return parrafos.map(p => `<p class="curso-parrafo">${escapar(p)}</p>`).join("");
     }
 
-    async function subirArchivosCursoAGoogleDrive(archivos, prefijo = "CURSO", estadoEl = null) {
+    async function subirArchivosCursoAGoogleDrive(items, prefijo = "CURSO", estadoEl = null) {
         const permitidos = ["image/jpeg", "image/png", "image/webp"];
         const subidas = [];
-        for (let i = 0; i < archivos.length; i++) {
-            const archivo = archivos[i];
+        for (let i = 0; i < items.length; i++) {
+            const entry = items[i];
+            const archivo = entry.file;
+            const descripcion = String(entry.descripcion ?? "").trim();
             if (!permitidos.includes(archivo.type) || archivo.size > 10 * 1024 * 1024) {
                 throw new Error(`"${archivo.name}" no es válido (usa JPG, PNG o WEBP de máx. 10MB).`);
             }
             if (estadoEl) {
-                estadoEl.textContent = `Subiendo foto ${i + 1} de ${archivos.length} a Google Drive...`;
+                estadoEl.textContent = `Subiendo foto ${i + 1} de ${items.length} a Google Drive...`;
             }
             const base64 = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -1554,7 +1556,8 @@ function iniciarModuloCursos() {
             if (resultado.status === "success" && resultado.url) {
                 subidas.push({
                     url: resultado.url,
-                    nombre: archivo.name
+                    nombre: archivo.name,
+                    descripcion
                 });
             } else {
                 throw new Error(resultado.message || "Error al subir imagen a Google Drive.");
@@ -1563,18 +1566,22 @@ function iniciarModuloCursos() {
         return subidas;
     }
 
-    function renderPreviewArchivos(archivos, contenedor, onQuitar) {
+    function renderPreviewArchivos(items, contenedor, onQuitar) {
         if (!contenedor) return;
         contenedor.innerHTML = "";
-        archivos.forEach((archivo, idx) => {
-            const url = URL.createObjectURL(archivo);
+        items.forEach((entry, idx) => {
+            const url = URL.createObjectURL(entry.file);
             const item = document.createElement("div");
             item.className = "curso-preview-item";
             item.innerHTML = `
-                <img src="${escapar(url)}" alt="${escapar(archivo.name)}">
-                <span>${escapar(archivo.name)}</span>
+                <img src="${escapar(url)}" alt="${escapar(entry.file.name)}">
+                <span>${escapar(entry.file.name)}</span>
+                <input type="text" class="curso-foto-desc-input" placeholder="Descripción de la foto (opcional)..." value="${escapar(entry.descripcion || "")}">
                 <button type="button" class="curso-btn-mini-del">Quitar</button>
             `;
+            item.querySelector("input").addEventListener("input", ev => {
+                entry.descripcion = ev.target.value;
+            });
             item.querySelector("button").addEventListener("click", () => {
                 URL.revokeObjectURL(url);
                 onQuitar(idx);
@@ -1585,7 +1592,10 @@ function iniciarModuloCursos() {
 
     if (inputFotosNuevo) {
         inputFotosNuevo.addEventListener("change", function onChangeNuevo() {
-            const agregados = Array.from(inputFotosNuevo.files || []);
+            const agregados = Array.from(inputFotosNuevo.files || []).map(file => ({
+                file,
+                descripcion: ""
+            }));
             archivosNuevoSub = [...archivosNuevoSub, ...agregados];
             inputFotosNuevo.value = "";
             const quitarHandler = idx => {
@@ -1617,7 +1627,8 @@ function iniciarModuloCursos() {
                 <a href="${escapar(foto.url)}" target="_blank" rel="noopener noreferrer">
                     <img src="${escapar(foto.url)}" alt="${escapar(foto.nombre || "Foto del tema")}" loading="lazy">
                 </a>
-                <button type="button" class="curso-btn-mini-del btn-quitar-foto-edit" data-fidx="${i}" style="margin-top:6px;width:100%;">
+                <input type="text" class="curso-foto-desc-input btn-desc-foto-edit" data-fidx="${i}" placeholder="Descripción de la foto..." value="${escapar(foto.descripcion || "")}">
+                <button type="button" class="curso-btn-mini-del btn-quitar-foto-edit" data-fidx="${i}" style="margin-top:4px;width:100%;">
                     🗑 Quitar foto
                 </button>
             </div>
@@ -1625,6 +1636,15 @@ function iniciarModuloCursos() {
     }
 
     if (editSubFotosActuales) {
+        editSubFotosActuales.addEventListener("input", e => {
+            const inputDesc = e.target.closest(".btn-desc-foto-edit");
+            if (!inputDesc) return;
+            const fidx = Number(inputDesc.dataset.fidx);
+            if (fotosEditActuales[fidx]) {
+                fotosEditActuales[fidx].descripcion = inputDesc.value;
+            }
+        });
+
         editSubFotosActuales.addEventListener("click", e => {
             const btn = e.target.closest(".btn-quitar-foto-edit");
             if (!btn) return;
@@ -1636,7 +1656,10 @@ function iniciarModuloCursos() {
 
     if (editSubNuevasFotos) {
         editSubNuevasFotos.addEventListener("change", () => {
-            const agregados = Array.from(editSubNuevasFotos.files || []);
+            const agregados = Array.from(editSubNuevasFotos.files || []).map(file => ({
+                file,
+                descripcion: ""
+            }));
             archivosEditSub = [...archivosEditSub, ...agregados];
             editSubNuevasFotos.value = "";
             const quitarEditHandler = idx => {
@@ -1696,7 +1719,7 @@ function iniciarModuloCursos() {
         $("edit_sub_idx").value = String(idx);
         $("edit_sub_titulo").value = sub.titulo || "";
         $("edit_sub_contenido").value = sub.contenido || "";
-        fotosEditActuales = Array.isArray(sub.fotos) ? [...sub.fotos] : [];
+        fotosEditActuales = Array.isArray(sub.fotos) ? sub.fotos.map(f => ({ ...f })) : [];
         archivosEditSub = [];
         if (editSubPreview) editSubPreview.innerHTML = "";
         if (editSubEstadoFotos) editSubEstadoFotos.textContent = "";
@@ -1791,9 +1814,12 @@ function iniciarModuloCursos() {
                                         ${fotosTema.length ? `
                                             <div class="curso-galeria">
                                                 ${fotosTema.map(f => `
-                                                    <a href="${escapar(f.url)}" target="_blank" rel="noopener noreferrer" class="curso-foto-card">
-                                                        <img src="${escapar(f.url)}" alt="${escapar(f.nombre || sub.titulo)}" loading="lazy">
-                                                    </a>
+                                                    <div class="curso-foto-card">
+                                                        <a href="${escapar(f.url)}" target="_blank" rel="noopener noreferrer">
+                                                            <img src="${escapar(f.url)}" alt="${escapar(f.descripcion || f.nombre || sub.titulo)}" loading="lazy">
+                                                        </a>
+                                                        ${f.descripcion ? `<p class="curso-foto-desc">${escapar(f.descripcion)}</p>` : ""}
+                                                    </div>
                                                 `).join("")}
                                             </div>
                                         ` : ""}
