@@ -1509,12 +1509,50 @@ function iniciarModuloCursos() {
     const editSubPreview = $("edit_sub_preview");
     const editSubEstadoFotos = $("edit_sub_estado_fotos");
 
+    const lightbox = $("cursoLightbox");
+    const lightboxImg = $("cursoLightboxImg");
+    const lightboxDesc = $("cursoLightboxDesc");
+    const lightboxCerrar = $("cursoLightboxCerrar");
+
     let listaModulos = [];
     let archivosNuevoSub = [];
     let archivosEditSub = [];
     let fotosEditActuales = [];
     let modulosAbiertos = new Set();
     let temasAbiertos = new Set();
+
+    function abrirLightbox(src, desc = "", alt = "Foto ampliada") {
+        if (!lightbox || !lightboxImg || !src) return;
+        lightboxImg.src = src;
+        lightboxImg.alt = alt || "Foto ampliada";
+        if (lightboxDesc) {
+            const textoDesc = String(desc ?? "").trim();
+            lightboxDesc.textContent = textoDesc;
+            lightboxDesc.classList.toggle("hidden", !textoDesc);
+        }
+        lightbox.classList.remove("hidden");
+    }
+
+    function cerrarLightbox() {
+        if (!lightbox || !lightboxImg) return;
+        lightbox.classList.add("hidden");
+        lightboxImg.src = "";
+        if (lightboxDesc) {
+            lightboxDesc.textContent = "";
+        }
+    }
+
+    lightboxCerrar?.addEventListener("click", cerrarLightbox);
+    lightbox?.addEventListener("click", e => {
+        if (e.target === lightbox) {
+            cerrarLightbox();
+        }
+    });
+    document.addEventListener("keydown", e => {
+        if (e.key === "Escape" && lightbox && !lightbox.classList.contains("hidden")) {
+            cerrarLightbox();
+        }
+    });
 
     function formatearTextoEnProsa(texto) {
         const limpio = String(texto ?? "").replace(/\r\n/g, "\n").trim();
@@ -1574,13 +1612,19 @@ function iniciarModuloCursos() {
             const item = document.createElement("div");
             item.className = "curso-preview-item";
             item.innerHTML = `
-                <img src="${escapar(url)}" alt="${escapar(entry.file.name)}">
+                <img src="${escapar(url)}" alt="${escapar(entry.file.name)}" class="curso-foto-ampliable" data-desc="${escapar(entry.descripcion || "")}">
                 <span>${escapar(entry.file.name)}</span>
                 <input type="text" class="curso-foto-desc-input" placeholder="Descripción de la foto (opcional)..." value="${escapar(entry.descripcion || "")}">
                 <button type="button" class="curso-btn-mini-del">Quitar</button>
             `;
-            item.querySelector("input").addEventListener("input", ev => {
+            const imgEl = item.querySelector("img");
+            const inputEl = item.querySelector("input");
+            imgEl.addEventListener("click", () => {
+                abrirLightbox(url, entry.descripcion || "", entry.file.name);
+            });
+            inputEl.addEventListener("input", ev => {
                 entry.descripcion = ev.target.value;
+                imgEl.dataset.desc = ev.target.value;
             });
             item.querySelector("button").addEventListener("click", () => {
                 URL.revokeObjectURL(url);
@@ -1624,9 +1668,7 @@ function iniciarModuloCursos() {
         }
         editSubFotosActuales.innerHTML = fotosEditActuales.map((foto, i) => `
             <div class="curso-foto-card">
-                <a href="${escapar(foto.url)}" target="_blank" rel="noopener noreferrer">
-                    <img src="${escapar(foto.url)}" alt="${escapar(foto.nombre || "Foto del tema")}" loading="lazy">
-                </a>
+                <img src="${escapar(foto.url)}" alt="${escapar(foto.nombre || "Foto del tema")}" loading="lazy" class="curso-foto-ampliable" data-desc="${escapar(foto.descripcion || "")}">
                 <input type="text" class="curso-foto-desc-input btn-desc-foto-edit" data-fidx="${i}" placeholder="Descripción de la foto..." value="${escapar(foto.descripcion || "")}">
                 <button type="button" class="curso-btn-mini-del btn-quitar-foto-edit" data-fidx="${i}" style="margin-top:4px;width:100%;">
                     🗑 Quitar foto
@@ -1642,15 +1684,24 @@ function iniciarModuloCursos() {
             const fidx = Number(inputDesc.dataset.fidx);
             if (fotosEditActuales[fidx]) {
                 fotosEditActuales[fidx].descripcion = inputDesc.value;
+                const card = inputDesc.closest(".curso-foto-card");
+                const img = card?.querySelector("img");
+                if (img) img.dataset.desc = inputDesc.value;
             }
         });
 
         editSubFotosActuales.addEventListener("click", e => {
             const btn = e.target.closest(".btn-quitar-foto-edit");
-            if (!btn) return;
-            const fidx = Number(btn.dataset.fidx);
-            fotosEditActuales = fotosEditActuales.filter((_, i) => i !== fidx);
-            renderFotosEditActuales();
+            if (btn) {
+                const fidx = Number(btn.dataset.fidx);
+                fotosEditActuales = fotosEditActuales.filter((_, i) => i !== fidx);
+                renderFotosEditActuales();
+                return;
+            }
+            const img = e.target.closest("img.curso-foto-ampliable");
+            if (img) {
+                abrirLightbox(img.src, img.dataset.desc || "", img.alt);
+            }
         });
     }
 
@@ -1815,9 +1866,7 @@ function iniciarModuloCursos() {
                                             <div class="curso-galeria">
                                                 ${fotosTema.map(f => `
                                                     <div class="curso-foto-card">
-                                                        <a href="${escapar(f.url)}" target="_blank" rel="noopener noreferrer">
-                                                            <img src="${escapar(f.url)}" alt="${escapar(f.descripcion || f.nombre || sub.titulo)}" loading="lazy">
-                                                        </a>
+                                                        <img src="${escapar(f.url)}" alt="${escapar(f.descripcion || f.nombre || sub.titulo)}" loading="lazy" class="curso-foto-ampliable" data-desc="${escapar(f.descripcion || "")}">
                                                         ${f.descripcion ? `<p class="curso-foto-desc">${escapar(f.descripcion)}</p>` : ""}
                                                     </div>
                                                 `).join("")}
@@ -1846,6 +1895,12 @@ function iniciarModuloCursos() {
     }
 
     contenedorModulos.addEventListener("click", async e => {
+        const imgAmpliable = e.target.closest("img.curso-foto-ampliable");
+        if (imgAmpliable) {
+            abrirLightbox(imgAmpliable.src, imgAmpliable.dataset.desc || "", imgAmpliable.alt);
+            return;
+        }
+
         const btnEditarMod = e.target.closest(".btn-editar-mod");
         if (btnEditarMod) {
             abrirEditorModulo(btnEditarMod.dataset.mod);
