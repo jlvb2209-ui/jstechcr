@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=20261123c">
+    <link rel="stylesheet" href="styles.css?v=20261123d">
 </head>
 <body>
 <section id="lg" class="login-screen hidden">
@@ -169,6 +169,15 @@
         </footer>
     </main>
 </div>
-<script type="module" src="app.js?v=20261123c"></script>
+
+<div id="cursoLightbox" class="curso-lightbox hidden" role="dialog" aria-modal="true" aria-label="Vista ampliada de fotografía">
+    <button type="button" id="cursoLightboxCerrar" class="curso-lightbox-cerrar" aria-label="Cerrar imagen">×</button>
+    <div class="curso-lightbox-contenido">
+        <img id="cursoLightboxImg" src="" alt="">
+        <p id="cursoLightboxDesc" class="curso-lightbox-desc"></p>
+    </div>
+</div>
+
+<script type="module" src="app.js?v=20261123d"></script>
 </body>
 </html>
